@@ -74,7 +74,8 @@ class Message(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
-    expediteur_id = Column(Integer, ForeignKey("utilisateurs.id", ondelete="SET NULL"), nullable=False, index=True)
+    # ⭐ CORRECTION ICI : nullable=True au lieu de nullable=False
+    expediteur_id = Column(Integer, ForeignKey("utilisateurs.id", ondelete="SET NULL"), nullable=True, index=True)
     type_message = Column(
         Enum(MessageTypeEnum, values_callable=lambda enum_cls: [item.value for item in enum_cls]),
         nullable=False,
