@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+   xmlns:smart="http://smartrecruit.org/ontologie#"
+>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidat_9">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidat"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourEmail>marlene@gmail.com</smart:aPourEmail>
+    <smart:aPourEmail>candidat_9@example.com</smart:aPourEmail>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</smart:estActif>
+    <rdfs:label xml:lang="fr">marlene@gmail.com</rdfs:label>
+    <rdfs:label xml:lang="fr">candidat_9@example.com</rdfs:label>
+    <smart:postuleA rdf:resource="http://smartrecruit.org/ontologie#Candidature_11"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Entreprise_10">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Entreprise"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourEmail>entreprise@gmail.com</smart:aPourEmail>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</smart:estActif>
+    <rdfs:label xml:lang="fr">entreprise@gmail.com</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Employe_1">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Employe"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">Ben KA</rdfs:label>
+    <smart:aPourNom>Ben KA</smart:aPourNom>
+    <smart:aPourEmail>ben@gmail.com</smart:aPourEmail>
+    <smart:aPourTelephone>+243 974529067</smart:aPourTelephone>
+    <smart:aPourAdresse>Kinshasa</smart:aPourAdresse>
+    <smart:aPourTitrePoste>okkaayy</smart:aPourTitrePoste>
+    <smart:aPourDateEmbauche rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2026-07-31</smart:aPourDateEmbauche>
+    <smart:occupePoste rdf:resource="http://smartrecruit.org/ontologie#Poste_1"/>
+    <smart:travailleDans rdf:resource="http://smartrecruit.org/ontologie#Departement_4"/>
+    <smart:aContratEmploye rdf:resource="http://smartrecruit.org/ontologie#Contrat_1"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Offre_7">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#OffreEmploi"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourTitre>Mougoupan</smart:aPourTitre>
+    <smart:aPourDescription>Messe de messe</smart:aPourDescription>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">false</smart:estActif>
+    <rdfs:label xml:lang="fr">Mougoupan</rdfs:label>
+    <smart:necessiteCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_8"/>
+    <smart:necessiteCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_11"/>
+    <smart:necessiteCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_13"/>
+    <smart:necessiteCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_14"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_11">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">RDF</rdfs:label>
+    <smart:aPourNom>RDF</smart:aPourNom>
+    <smart:aPourCategorie>web_semantique</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_15">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">show fort</rdfs:label>
+    <smart:aPourNom>show fort</smart:aPourNom>
+    <smart:aPourCategorie>autre</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_1">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">Python</rdfs:label>
+    <smart:aPourNom>Python</smart:aPourNom>
+    <smart:aPourCategorie>programmation</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Employe_3">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Employe"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">Moise Tshisambu</rdfs:label>
+    <smart:aPourNom>Moise Tshisambu</smart:aPourNom>
+    <smart:aPourEmail>moise@gmail.com</smart:aPourEmail>
+    <smart:aPourTelephone>974529067</smart:aPourTelephone>
+    <smart:aPourAdresse>Kananga</smart:aPourAdresse>
+    <smart:aPourTitrePoste>Développeur  Front-end</smart:aPourTitrePoste>
+    <smart:aPourDateEmbauche rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2026-09-07</smart:aPourDateEmbauche>
+    <smart:occupePoste rdf:resource="http://smartrecruit.org/ontologie#Poste_3"/>
+    <smart:travailleDans rdf:resource="http://smartrecruit.org/ontologie#Departement_6"/>
+    <smart:aContratEmploye rdf:resource="http://smartrecruit.org/ontologie#Contrat_2"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidat_4">
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_2"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_4"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_8"/>
+    <smart:aPourNiveauCompetence>INTERMEDIAIRE</smart:aPourNiveauCompetence>
+    <smart:aPourNiveauCompetence>EXPERT</smart:aPourNiveauCompetence>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_2">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">Java</rdfs:label>
+    <smart:aPourNom>Java</smart:aPourNom>
+    <smart:aPourCategorie>programmation</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidat_6">
+    <smart:postuleA rdf:resource="http://smartrecruit.org/ontologie#Candidature_8"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_2"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_1"/>
+    <smart:aPourNiveauCompetence>EXPERT</smart:aPourNiveauCompetence>
+    <smart:aPourNiveauCompetence>AVANCE</smart:aPourNiveauCompetence>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidat_7">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidat"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourEmail>ben@gmail.com</smart:aPourEmail>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</smart:estActif>
+    <rdfs:label xml:lang="fr">ben@gmail.com</rdfs:label>
+    <smart:postuleA rdf:resource="http://smartrecruit.org/ontologie#Candidature_7"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_4"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_3"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_5"/>
+    <smart:aPourNiveauCompetence>EXPERT</smart:aPourNiveauCompetence>
+    <smart:aPourNiveauCompetence>INTERMEDIAIRE</smart:aPourNiveauCompetence>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Employe_2">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Employe"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">Marlene Kanku</rdfs:label>
+    <smart:aPourNom>Marlene Kanku</smart:aPourNom>
+    <smart:aPourEmail>marlene@gmail.com</smart:aPourEmail>
+    <smart:aPourTelephone>12345678</smart:aPourTelephone>
+    <smart:aPourAdresse>Kinshasa</smart:aPourAdresse>
+    <smart:aPourTitrePoste>Chef IA</smart:aPourTitrePoste>
+    <smart:aPourDateEmbauche rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2026-08-16</smart:aPourDateEmbauche>
+    <smart:occupePoste rdf:resource="http://smartrecruit.org/ontologie#Poste_4"/>
+    <smart:travailleDans rdf:resource="http://smartrecruit.org/ontologie#Departement_4"/>
+    <smart:aContratEmploye rdf:resource="http://smartrecruit.org/ontologie#Contrat_1"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Offre_8">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#OffreEmploi"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourTitre>Devellopeur Front-end </smart:aPourTitre>
+    <smart:aPourDescription>Nous recherchons un candidat competent en developpement front-end qui peut nous aider dans nogtre contrat cdd</smart:aPourDescription>
+    <smart:aPourDescription></smart:aPourDescription>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</smart:estActif>
+    <rdfs:label xml:lang="fr">Devellopeur Front-end </rdfs:label>
+    <smart:necessiteCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_3"/>
+    <smart:necessiteCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_4"/>
+    <smart:necessiteCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_5"/>
+    <smart:necessiteCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_6"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidat_11">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidat"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourEmail>magloire@gmail.com</smart:aPourEmail>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</smart:estActif>
+    <rdfs:label xml:lang="fr">magloire@gmail.com</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidat_12">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidat"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourEmail>tshiama@gmail.com</smart:aPourEmail>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</smart:estActif>
+    <rdfs:label xml:lang="fr">tshiama@gmail.com</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidature_12">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidature"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourStatut>EN_ATTENTE</smart:aPourStatut>
+    <smart:concerneOffre rdf:resource="http://smartrecruit.org/ontologie#Offre_8"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_3">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">JavaScript</rdfs:label>
+    <smart:aPourNom>JavaScript</smart:aPourNom>
+    <smart:aPourCategorie>programmation</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidat_2">
+    <smart:postuleA rdf:resource="http://smartrecruit.org/ontologie#Candidature_10"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_1"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_2"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_3"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_4"/>
+    <smart:possedeCompetence rdf:resource="http://smartrecruit.org/ontologie#Competence_5"/>
+    <smart:aPourNiveauCompetence>AVANCE</smart:aPourNiveauCompetence>
+    <smart:aPourNiveauCompetence>EXPERT</smart:aPourNiveauCompetence>
+    <smart:aPourNiveauCompetence>INTERMEDIAIRE</smart:aPourNiveauCompetence>
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidat"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourEmail>candidat_2@example.com</smart:aPourEmail>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</smart:estActif>
+    <rdfs:label xml:lang="fr">candidat_2@example.com</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidat_13">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidat"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourEmail>moise@gmail.com</smart:aPourEmail>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</smart:estActif>
+    <rdfs:label xml:lang="fr">moise@gmail.com</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_8">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">MySQL</rdfs:label>
+    <smart:aPourNom>MySQL</smart:aPourNom>
+    <smart:aPourCategorie>base_de_donnees</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidature_7">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidature"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourStatut>acceptee</smart:aPourStatut>
+    <smart:concerneOffre rdf:resource="http://smartrecruit.org/ontologie#Offre_8"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Employe_4">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Employe"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">Rodrigue  Mupenda</rdfs:label>
+    <smart:aPourNom>Rodrigue  Mupenda</smart:aPourNom>
+    <smart:aPourEmail>rodriguendjibu@gmail.com</smart:aPourEmail>
+    <smart:estEmployePar rdf:resource="http://smartrecruit.org/ontologie#Entreprise_4"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Employe_5">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Employe"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">Eliel Makambu</rdfs:label>
+    <smart:aPourNom>Eliel Makambu</smart:aPourNom>
+    <smart:aPourEmail>eliel@gmail.com</smart:aPourEmail>
+    <smart:estEmployePar rdf:resource="http://smartrecruit.org/ontologie#Entreprise_4"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidature_9">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidature"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourStatut>en_attente</smart:aPourStatut>
+    <smart:concerneOffre rdf:resource="http://smartrecruit.org/ontologie#Offre_8"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_14">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">SPARQL</rdfs:label>
+    <smart:aPourNom>SPARQL</smart:aPourNom>
+    <smart:aPourCategorie>web_semantique</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_12">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">RDFS</rdfs:label>
+    <smart:aPourNom>RDFS</smart:aPourNom>
+    <smart:aPourCategorie>web_semantique</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidat_8">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidat"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourEmail>candidat_8@example.com</smart:aPourEmail>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</smart:estActif>
+    <rdfs:label xml:lang="fr">candidat_8@example.com</rdfs:label>
+    <smart:postuleA rdf:resource="http://smartrecruit.org/ontologie#Candidature_12"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Entreprise_4">
+    <smart:publieOffre rdf:resource="http://smartrecruit.org/ontologie#Offre_8"/>
+    <smart:emploie rdf:resource="http://smartrecruit.org/ontologie#Employe_4"/>
+    <smart:emploie rdf:resource="http://smartrecruit.org/ontologie#Employe_5"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_9">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">PostgreSQL</rdfs:label>
+    <smart:aPourNom>PostgreSQL</smart:aPourNom>
+    <smart:aPourCategorie>base_de_donnees</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidature_8">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidature"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourStatut>en_attente</smart:aPourStatut>
+    <smart:concerneOffre rdf:resource="http://smartrecruit.org/ontologie#Offre_8"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Entreprise_6">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Entreprise"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourEmail>j@gmail.com</smart:aPourEmail>
+    <smart:estActif rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</smart:estActif>
+    <rdfs:label xml:lang="fr">j@gmail.com</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_4">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">React</rdfs:label>
+    <smart:aPourNom>React</smart:aPourNom>
+    <smart:aPourCategorie>developpement_web</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_7">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">SQL</rdfs:label>
+    <smart:aPourNom>SQL</smart:aPourNom>
+    <smart:aPourCategorie>base_de_donnees</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_10">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">MongoDB</rdfs:label>
+    <smart:aPourNom>MongoDB</smart:aPourNom>
+    <smart:aPourCategorie>base_de_donnees</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_6">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">Vue.js</rdfs:label>
+    <smart:aPourNom>Vue.js</smart:aPourNom>
+    <smart:aPourCategorie>developpement_web</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidature_11">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidature"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourStatut>EN_ATTENTE</smart:aPourStatut>
+    <smart:concerneOffre rdf:resource="http://smartrecruit.org/ontologie#Offre_8"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_13">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">OWL</rdfs:label>
+    <smart:aPourNom>OWL</smart:aPourNom>
+    <smart:aPourCategorie>web_semantique</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidature_10">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Candidature"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <smart:aPourStatut>en_attente</smart:aPourStatut>
+    <smart:concerneOffre rdf:resource="http://smartrecruit.org/ontologie#Offre_8"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Competence_5">
+    <rdf:type rdf:resource="http://smartrecruit.org/ontologie#Competence"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label xml:lang="fr">Angular</rdfs:label>
+    <smart:aPourNom>Angular</smart:aPourNom>
+    <smart:aPourCategorie>developpement_web</smart:aPourCategorie>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Entreprise_5">
+    <smart:publieOffre rdf:resource="http://smartrecruit.org/ontologie#Offre_7"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://smartrecruit.org/ontologie#Candidat_5">
+    <smart:postuleA rdf:resource="http://smartrecruit.org/ontologie#Candidature_9"/>
+  </rdf:Description>
+</rdf:RDF>

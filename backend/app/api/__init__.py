@@ -1,0 +1,2 @@
+# backend/app/api/__init__.py
+from app.api import auth, candidats, competences, offres, entreprises, admin, fichiers, postes, contrats, candidatures, departements, employes, messagerie, notifications, messagerie_ws
