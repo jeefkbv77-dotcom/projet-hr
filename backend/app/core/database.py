@@ -1,24 +1,36 @@
 """
 Configuration de la base de données avec SQLAlchemy
 """
+import os
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
-# Créer le moteur de base de données
+# ⭐ CONFIGURATION DU MOTEUR DE BASE DE DONNÉES
 if settings.DATABASE_URL.startswith("sqlite"):
+    # Configuration pour SQLite (développement local)
     engine = create_engine(
         settings.DATABASE_URL,
         connect_args={"check_same_thread": False},
         echo=settings.DEBUG
     )
 else:
+    # Configuration pour MySQL (Aiven en production)
+    # On vérifie si le certificat ca.pem est présent à la racine du backend
+    ca_path = "ca.pem" if os.path.exists("ca.pem") else None
+    
+    connect_args = {}
+    if ca_path:
+        # Si le certificat est là, on l'utilise pour la connexion sécurisée
+        connect_args = {"ssl": {"ca": ca_path}}
+
     engine = create_engine(
         settings.DATABASE_URL,
         pool_pre_ping=True,
         pool_recycle=3600,
-        echo=settings.DEBUG
+        echo=settings.DEBUG,
+        connect_args=connect_args  # ⭐ On ajoute le certificat ici
     )
 
 # Créer la session locale
@@ -35,6 +47,7 @@ def ensure_database_schema():
 
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
+    
     if engine.dialect.name == "mysql":
         with engine.begin() as connection:
             if "fichiers" in table_names:
