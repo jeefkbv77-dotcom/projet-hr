@@ -70,7 +70,6 @@ export interface MessageCreateData {
   thumbnail_url?: string
 }
 
-// ⭐⭐⭐ TOUTES LES URLs SANS /api/ (car api.ts a déjà /api dans baseURL) ⭐⭐⭐
 export const messagerieService = {
   getConversations: async (): Promise<Conversation[]> => {
     const response = await api.get('/messagerie/conversations')
