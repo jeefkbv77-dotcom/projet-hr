@@ -44,13 +44,13 @@ except Exception as e:
 # Version de l'application
 APP_VERSION = "1.0.0"
 
-# Créer l'application FastAPI
+# ⭐⭐⭐ SWAGGER ACTIVÉ EN PERMANENCE ⭐⭐⭐
 app = FastAPI(
     title="SmartRecruit API",
     description="API pour la plateforme de recrutement intelligent SmartRecruit",
     version=APP_VERSION,
-    docs_url="/api/docs" if settings.DEBUG else None,
-    redoc_url="/api/redoc" if settings.DEBUG else None,
+    docs_url="/api/docs",      # Toujours accessible
+    redoc_url="/api/redoc",    # Toujours accessible
 )
 
 
@@ -238,7 +238,7 @@ async def root():
         "version": APP_VERSION,
         "status": "online",
         "timestamp": datetime.now().isoformat(),
-        "docs": "/api/docs" if settings.DEBUG else None,
+        "docs": "/api/docs", # ⭐ Toujours indiqué
         "routes": {
             "auth": "/api/auth",
             "candidats": "/api/candidats",
@@ -311,7 +311,7 @@ def fix_files_columns():
             connection.execute(text("ALTER TABLE candidats MODIFY COLUMN cv_blob LONGBLOB;"))
             connection.execute(text("ALTER TABLE candidats MODIFY COLUMN lettre_motivation_blob LONGBLOB;"))
             
-            # Entreprises (⭐ AJOUTÉ ICI)
+            # Entreprises
             connection.execute(text("ALTER TABLE entreprises MODIFY COLUMN logo_blob LONGBLOB;"))
             connection.execute(text("ALTER TABLE entreprises MODIFY COLUMN photo_couverture_blob LONGBLOB;"))
             
