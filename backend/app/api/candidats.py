@@ -201,9 +201,29 @@ async def upload_ma_photo(
     if len(contenu) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Le fichier dépasse 10MB")
     
-    mime = fichier.content_type or mimetypes.guess_type(fichier.filename or "")[0] or "image/jpeg"
+    # ⭐ CORRECTION : Détection intelligente du type d'image
+    mime = fichier.content_type or ""
+    extension = (fichier.filename or "").lower().rsplit(".", 1)[-1]
+    
+    # Si le navigateur envoie un type MIME bizarre, on devine grâce à l'extension ou aux octets
     if not mime.startswith("image/"):
-        raise HTTPException(status_code=415, detail="La photo doit être une image")
+        if extension in ["jpg", "jpeg"]:
+            mime = "image/jpeg"
+        elif extension == "png":
+            mime = "image/png"
+        elif extension == "gif":
+            mime = "image/gif"
+        elif extension == "webp":
+            mime = "image/webp"
+        else:
+            # Si on ne trouve vraiment pas, on vérifie le contenu brut
+            if contenu.startswith(b'\xff\xd8\xff'):
+                mime = "image/jpeg"
+            elif contenu.startswith(b'\x89PNG'):
+                mime = "image/png"
+            else:
+                raise HTTPException(status_code=415, detail="Le fichier fourni n'est pas une image valide (jpg, png, gif, webp)")
+
     try:
         candidat.photo_blob = contenu
         candidat.photo_type = mime
