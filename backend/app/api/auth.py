@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timedelta
 import asyncio
 import logging
+import os  # ⭐ IMPORT AJOUTÉ
 
 from app.core.database import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token
@@ -51,6 +52,12 @@ class RegisterCandidatRequest(BaseModel):
 class RegisterEntrepriseRequest(BaseModel):
     utilisateur: UtilisateurCreate
     entreprise: EntrepriseCreate
+
+# ⭐ NOUVEAU MODÈLE POUR L'ADMIN
+class AdminRegisterRequest(BaseModel):
+    email: str
+    mot_de_passe: str
+    secret: str
 
 router = APIRouter(prefix="/api/auth", tags=["authentification"])
 
@@ -321,3 +328,45 @@ async def get_me(
         )
 
     return user_full
+
+
+# ⭐⭐⭐ ROUTE SECRÈTE POUR CRÉER UN ADMIN ⭐⭐⭐
+@router.post("/register-admin-secret")
+async def register_admin_secret(data: AdminRegisterRequest, db: Session = Depends(get_db)):
+    """
+    Créer un administrateur avec une clé secrète.
+    Utiliser uniquement pour le premier admin ou en cas de besoin.
+    """
+    # 1. On vérifie que le secret fourni est le bon
+    secret_attendu = os.getenv("ADMIN_REGISTRATION_SECRET")
+    if not secret_attendu or data.secret != secret_attendu:
+        raise HTTPException(status_code=403, detail="Clé secrète invalide")
+    
+    email_clean = data.email.strip().lower()
+    
+    # 2. On vérifie si l'email existe déjà
+    existing = db.query(Utilisateur).filter(Utilisateur.email == email_clean).first()
+    if existing:
+        # S'il existe, on le passe juste en admin
+        existing.role = RoleEnum.ADMIN
+        db.commit()
+        logger.info(f"✅ Utilisateur existant {email_clean} passé en admin")
+        return {"message": "Utilisateur existant passé en admin", "email": email_clean}
+    
+    # 3. Sinon, on crée un nouvel admin
+    try:
+        new_admin = Utilisateur(
+            email=email_clean,
+            mot_de_passe=get_password_hash(data.mot_de_passe),
+            role=RoleEnum.ADMIN,
+            actif=True
+        )
+        db.add(new_admin)
+        db.commit()
+        db.refresh(new_admin)
+        logger.info(f"✅ Admin créé avec succès: {email_clean}")
+        return {"message": "Admin créé avec succès", "email": email_clean}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"❌ Erreur création admin: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

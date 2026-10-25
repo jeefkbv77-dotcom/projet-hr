@@ -64,17 +64,14 @@ const Messagerie = () => {
     if (!estConnecte) return
 
     const token = getToken()
-    if (!token) {
-      console.warn('⚠️ Pas de token pour WebSocket')
-      return
-    }
+    if (!token) return
 
     if (wsRef.current) {
       wsRef.current.close()
       wsRef.current = null
     }
 
-    // ⭐ CORRECTION : Utiliser API_ORIGIN pour cibler le bon serveur (Render)
+    // ⭐ Utiliser API_ORIGIN pour cibler le bon serveur (Render)
     const wsBase = API_ORIGIN.replace('https://', 'wss://').replace('http://', 'ws://')
     const wsUrl = `${wsBase}/api/messagerie/ws?token=${encodeURIComponent(token)}`
     
@@ -83,14 +80,11 @@ const Messagerie = () => {
       wsRef.current = ws
 
       ws.onopen = () => {
-        console.log('🔌 WS connecté')
         setIsWsConnected(true)
         setReconnectAttempts(0)
         ws.send(JSON.stringify({ action: 'get_online_users' }))
         
-        if (heartbeatIntervalRef.current) {
-          clearInterval(heartbeatIntervalRef.current)
-        }
+        if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
         heartbeatIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ action: 'ping', timestamp: new Date().toISOString() }))
@@ -101,7 +95,6 @@ const Messagerie = () => {
       ws.onmessage = (ev) => {
         try {
           const msg = JSON.parse(ev.data)
-          
           switch (msg.action) {
             case 'pong': break
             case 'ping':
@@ -110,9 +103,7 @@ const Messagerie = () => {
               }
               break
             case 'online_users':
-              if (msg.users && Array.isArray(msg.users)) {
-                setOnlineUsers(new Set(msg.users))
-              }
+              if (msg.users && Array.isArray(msg.users)) setOnlineUsers(new Set(msg.users))
               break
             case 'presence':
               setOnlineUsers(prev => {
@@ -132,26 +123,20 @@ const Messagerie = () => {
               }
               break
             case 'error':
-              console.error('❌ Erreur WS:', msg.message)
               setSending(false)
               afficherNotification(msg.message || 'Impossible d\'envoyer le message', 'error')
               break
           }
-        } catch (e) {
-          console.error('❌ WS parsing error:', e)
-        }
+        } catch (e) {}
       }
 
       ws.onclose = () => {
-        console.log(`🔌 WS déconnecté`)
         setIsWsConnected(false)
         wsRef.current = null
-        
         if (heartbeatIntervalRef.current) {
           clearInterval(heartbeatIntervalRef.current)
           heartbeatIntervalRef.current = null
         }
-
         if (estConnecte && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
           const delay = RECONNECT_DELAY * (reconnectAttempts + 1)
           if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current)
@@ -162,11 +147,8 @@ const Messagerie = () => {
         }
       }
 
-      ws.onerror = (error) => console.error('❌ WS error:', error)
-
-    } catch (error) {
-      console.error('❌ Erreur création WS:', error)
-    }
+      ws.onerror = () => {}
+    } catch (error) {}
   }, [estConnecte, reconnectAttempts, afficherNotification])
 
   useEffect(() => {
@@ -175,7 +157,6 @@ const Messagerie = () => {
       fetchConversations()
       fetchSuggestedContacts()
     }
-
     return () => {
       if (wsRef.current) wsRef.current.close()
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current)
@@ -184,9 +165,7 @@ const Messagerie = () => {
   }, [estConnecte, connectWebSocket])
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
+    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const isUserOnline = (userId: number): boolean => onlineUsers.has(userId)
@@ -198,11 +177,8 @@ const Messagerie = () => {
       setConversations(data)
     } catch (error: any) {
       if (error.response?.status === 401) {
-        clearSession()
-        window.location.href = '/connexion'
-        return
+        clearSession(); window.location.href = '/connexion'; return
       }
-      afficherNotification(error.response?.data?.detail || 'Impossible de charger les conversations', 'error')
     } finally {
       setLoading(false)
     }
@@ -212,9 +188,7 @@ const Messagerie = () => {
     try {
       const response = await api.get('/messagerie/utilisateurs/contacts')
       setSuggestedContacts(response.data)
-    } catch (error: any) {
-      console.error('❌ Erreur contacts:', error)
-    }
+    } catch (error) {}
   }
 
   const selectConversation = async (conversation: Conversation) => {
@@ -223,25 +197,17 @@ const Messagerie = () => {
     try {
       const msgs = await messagerieService.getMessages(conversation.id)
       setMessages(msgs)
-    } catch (error: any) {
-      afficherNotification(error.response?.data?.detail || 'Impossible de charger les messages', 'error')
-    }
+    } catch (error) {}
   }
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      setSearchResults([])
-      return
-    }
+    if (!searchQuery.trim()) { setSearchResults([]); return }
     setSearching(true)
     try {
       const response = await api.get(`/messagerie/utilisateurs/recherche?q=${encodeURIComponent(searchQuery.trim())}`)
       setSearchResults(response.data)
-    } catch (error: any) {
-      afficherNotification('Erreur lors de la recherche', 'error')
-    } finally {
-      setSearching(false)
-    }
+    } catch (error) {}
+    finally { setSearching(false) }
   }
 
   const handleStartConversation = async (user: RechercheUtilisateurResult) => {
@@ -250,21 +216,17 @@ const Messagerie = () => {
         type_conversation: 'individuel',
         participant_ids: [user.id]
       })
-      setSearchQuery('')
-      setSearchResults([])
+      setSearchQuery(''); setSearchResults([])
       await fetchConversations()
       await selectConversation(conversation)
-    } catch (error: any) {
-      afficherNotification(error.response?.data?.detail || 'Impossible de démarrer la conversation', 'error')
-    }
+    } catch (error) {}
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 25 * 1024 * 1024) {
-      afficherNotification('Fichier trop volumineux (max 25MB)', 'error')
-      return
+      afficherNotification('Fichier trop volumineux (max 25MB)', 'error'); return
     }
     setSelectedFile(file)
     if (file.type.startsWith('image/')) setPreviewUrl(URL.createObjectURL(file))
@@ -272,17 +234,13 @@ const Messagerie = () => {
   }
 
   const clearAttachment = () => {
-    setSelectedFile(null)
-    setPreviewUrl(null)
+    setSelectedFile(null); setPreviewUrl(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const startRecording = async () => {
     try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        afficherNotification("Microphone non accessible", 'error')
-        return
-      }
+      if (!navigator.mediaDevices?.getUserMedia) return
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
@@ -300,12 +258,9 @@ const Messagerie = () => {
       }
 
       mediaRecorder.start()
-      setIsRecording(true)
-      setRecordingTime(0)
+      setIsRecording(true); setRecordingTime(0)
       recordingTimerRef.current = window.setInterval(() => setRecordingTime(prev => prev + 1), 1000)
-    } catch (err) {
-      afficherNotification("Impossible d'accéder au microphone", 'error')
-    }
+    } catch (err) {}
   }
 
   const stopRecording = () => {
@@ -333,16 +288,12 @@ const Messagerie = () => {
       const newMessage = await messagerieService.sendMessage(payload)
       setMessages(prev => [...prev, newMessage])
       fetchConversations()
-    } catch (error: any) {
-      afficherNotification("Erreur d'envoi du vocal", 'error')
-    } finally {
-      setSending(false)
-    }
+    } catch (error) {}
+    finally { setSending(false) }
   }
 
   const handleSendMessage = async () => {
     if (!selectedConversation || (!messageText.trim() && !selectedFile)) return
-
     setSending(true)
     try {
       let piece_jointe_id = undefined
@@ -378,11 +329,8 @@ const Messagerie = () => {
       setMessageText('')
       clearAttachment()
       fetchConversations()
-    } catch (error: any) {
-      afficherNotification('Impossible d\'envoyer le message', 'error')
-    } finally {
-      setSending(false)
-    }
+    } catch (error) {}
+    finally { setSending(false) }
   }
 
   const formatTime = (seconds: number) => {
@@ -398,7 +346,6 @@ const Messagerie = () => {
   const getContactList = () => {
     const contacts: (RechercheUtilisateurResult & { conversationId?: number; lastMessage?: any })[] = []
     const seenUserIds = new Set<number>()
-
     conversations.forEach(conv => {
       const partner = getConversationPartner(conv)
       if (partner && partner.id && partner.id > 0) {
@@ -406,11 +353,9 @@ const Messagerie = () => {
         contacts.push({ ...partner, conversationId: conv.id, lastMessage: conv.dernier_message })
       }
     })
-
     suggestedContacts.forEach(contact => {
       if (contact.id && contact.id > 0 && !seenUserIds.has(contact.id)) contacts.push(contact)
     })
-
     return contacts
   }
 
@@ -436,15 +381,13 @@ const Messagerie = () => {
           <div className="p-4 border-b border-gray-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-primary-500" />
-                Messages
+                <MessageCircle className="w-5 h-5 text-primary-500" /> Messages
               </h2>
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${isWsConnected ? 'bg-green-500' : 'bg-red-500'}`} />
                 <span className="text-xs text-gray-400">{isWsConnected ? 'En ligne' : 'Hors ligne'}</span>
               </div>
             </div>
-            
             <div className="relative">
               <input
                 value={searchQuery}
@@ -463,31 +406,23 @@ const Messagerie = () => {
             ) : searchResults.length > 0 ? (
               <>
                 <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Résultats</div>
-                {searchResults.filter(r => r.id > 0).map((result) => {
-                  const isOnline = isUserOnline(result.id)
-                  return (
-                    <button
-                      key={`search-${result.id}`}
-                      onClick={() => handleStartConversation(result)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition group"
-                    >
-                      <img
-                        src={result.role === 'entreprise' ? getEntrepriseLogoByUserUrl(result.id) : getCandidatPhotoByUserUrl(result.id)}
-                        alt="Avatar"
-                        className="w-10 h-10 rounded-full object-cover border-2 border-primary-500/30 flex-shrink-0"
-                      />
-                      <div className="flex-1 text-left min-w-0">
-                        <p className="font-medium text-gray-800 dark:text-gray-200 truncate">{result.display_name || result.email}</p>
-                        <p className="text-xs text-gray-500 truncate">{result.email}</p>
-                      </div>
-                    </button>
-                  )
-                })}
+                {searchResults.filter(r => r.id > 0).map((result) => (
+                  <button
+                    key={`search-${result.id}`}
+                    onClick={() => handleStartConversation(result)}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition group"
+                  >
+                    <img src={result.role === 'entreprise' ? getEntrepriseLogoByUserUrl(result.id) : getCandidatPhotoByUserUrl(result.id)} alt="Avatar" className="w-10 h-10 rounded-full object-cover border-2 border-primary-500/30" />
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="font-medium text-gray-800 dark:text-gray-200 truncate">{result.display_name || result.email}</p>
+                      <p className="text-xs text-gray-500 truncate">{result.email}</p>
+                    </div>
+                  </button>
+                ))}
               </>
             ) : contactList.length === 0 ? (
               <div className="text-center py-8 text-gray-500 text-sm">
-                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p>Aucun contact</p>
+                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p>Aucun contact</p>
               </div>
             ) : (
               <div>
@@ -503,19 +438,11 @@ const Messagerie = () => {
                         if (contact.conversationId) {
                           const conv = conversations.find(c => c.id === contact.conversationId)
                           if (conv) selectConversation(conv)
-                        } else {
-                          handleStartConversation(contact)
-                        }
+                        } else handleStartConversation(contact)
                       }}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${
-                        isSelected ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200' : 'hover:bg-gray-50 dark:hover:bg-slate-800/50'
-                      }`}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${isSelected ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200' : 'hover:bg-gray-50 dark:hover:bg-slate-800/50'}`}
                     >
-                      <img
-                        src={contact.role === 'entreprise' ? getEntrepriseLogoByUserUrl(contact.id) : getCandidatPhotoByUserUrl(contact.id)}
-                        alt="Avatar"
-                        className="w-12 h-12 rounded-full object-cover border-2 border-primary-500/30 flex-shrink-0"
-                      />
+                      <img src={contact.role === 'entreprise' ? getEntrepriseLogoByUserUrl(contact.id) : getCandidatPhotoByUserUrl(contact.id)} alt="Avatar" className="w-12 h-12 rounded-full object-cover border-2 border-primary-500/30" />
                       <div className="flex-1 text-left min-w-0">
                         <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{contact.display_name || contact.email}</p>
                         <p className="text-sm text-gray-500 truncate">
@@ -544,11 +471,7 @@ const Messagerie = () => {
                   const isOnline = isUserOnline(partner?.id || 0)
                   return (
                     <>
-                      <img
-                        src={partner?.role === 'entreprise' ? getEntrepriseLogoByUserUrl(partner?.id || 0) : getCandidatPhotoByUserUrl(partner?.id || 0)}
-                        alt="Avatar"
-                        className="w-10 h-10 rounded-full object-cover border-2 border-primary-500/30 flex-shrink-0"
-                      />
+                      <img src={partner?.role === 'entreprise' ? getEntrepriseLogoByUserUrl(partner?.id || 0) : getCandidatPhotoByUserUrl(partner?.id || 0)} alt="Avatar" className="w-10 h-10 rounded-full object-cover border-2 border-primary-500/30" />
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-gray-800 dark:text-gray-200 truncate">{partner?.display_name || partner?.email || 'Utilisateur'}</p>
                         <p className={`text-xs ${isOnline ? 'text-green-600' : 'text-gray-400'}`}>{isOnline ? '🟢 En ligne' : '⚪ Hors ligne'}</p>
@@ -574,48 +497,30 @@ const Messagerie = () => {
                             {message.expediteur?.display_name || message.expediteur?.email || 'Utilisateur'}
                           </span>
                         )}
-                        <div className={`px-4 py-2.5 rounded-2xl shadow-sm ${
-                          isMe ? 'bg-primary-500 text-white rounded-tr-sm' : 'bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-slate-700'
-                        }`}>
-                          {/* PHOTO */}
+                        <div className={`px-4 py-2.5 rounded-2xl shadow-sm ${isMe ? 'bg-primary-500 text-white rounded-tr-sm' : 'bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-slate-700'}`}>
                           {message.piece_jointe_id && message.type_message === 'image' && (
                             <div className="mb-2">
-                              <img
-                                src={getFileUrl(message.file_url || message.download_url || '')}
-                                alt="Photo"
-                                className="max-h-[300px] w-full object-cover rounded-xl cursor-pointer"
-                                onClick={() => setPhotoViewerSrc(getFileUrl(message.file_url || message.download_url || ''))}
-                              />
+                              <img src={getFileUrl(message.file_url || message.download_url || '')} alt="Photo" className="max-h-[300px] w-full object-cover rounded-xl cursor-pointer" onClick={() => setPhotoViewerSrc(getFileUrl(message.file_url || message.download_url || ''))} />
                             </div>
                           )}
-
-                          {/* AUDIO */}
                           {message.piece_jointe_id && (message.type_message === 'voice' || message.type_message === 'audio') && (
                             <div className="mb-2">
                               <audio src={getFileUrl(message.file_url || message.download_url || '')} controls className="w-full max-w-[280px]" />
                             </div>
                           )}
-
-                          {/* DOCUMENT */}
                           {message.piece_jointe_id && message.type_message === 'document' && (
                             <div className="mb-2">
                               <a href={getFileUrl(message.download_url || message.file_url || '')} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-black/5 p-3 rounded-xl">
-                                <FileText className="w-6 h-6 text-primary-500" />
-                                <span className="text-sm truncate">{message.file_name || 'Document'}</span>
+                                <FileText className="w-6 h-6 text-primary-500" /><span className="text-sm truncate">{message.file_name || 'Document'}</span>
                               </a>
                             </div>
                           )}
-
-                          {/* VIDEO */}
                           {message.piece_jointe_id && message.type_message === 'video' && (
                             <div className="mb-2">
                               <video src={getFileUrl(message.file_url || message.download_url || '')} controls className="rounded-xl max-h-[300px] w-full" preload="metadata" />
                             </div>
                           )}
-
-                          {/* TEXTE */}
                           {message.contenu && <p className="text-[15px] whitespace-pre-wrap leading-snug">{message.contenu}</p>}
-                          
                           <div className={`text-[10px] mt-1 ${isMe ? 'text-primary-100' : 'text-gray-400'}`}>
                             {new Date(message.date_envoi).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                           </div>
@@ -685,7 +590,6 @@ const Messagerie = () => {
         </GlassCard>
       </div>
 
-      {/* PHOTO VIEWER */}
       {photoViewerSrc && (
         <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4" onClick={() => setPhotoViewerSrc(null)}>
           <img src={photoViewerSrc} alt="Photo" className="max-w-full max-h-[85vh] object-contain rounded-lg" onClick={(e) => e.stopPropagation()} />
