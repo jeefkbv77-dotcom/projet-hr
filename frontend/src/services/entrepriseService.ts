@@ -59,6 +59,51 @@ export interface OffreUpdate {
   statut?: StatutOffre
 }
 
+// ⭐ FONCTION DE COMPRESSION D'IMAGE (IDENTIQUE À CELLE DU CANDIDAT)
+const compresserImage = (file: File, maxWidth: number = 800, quality: number = 0.7): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (event) => {
+      const img = new Image()
+      img.src = event.target?.result as string
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width)
+          width = maxWidth
+        }
+
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0, width, height)
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              })
+              resolve(compressedFile)
+            } else {
+              reject(new Error('Compression échouée'))
+            }
+          },
+          'image/jpeg',
+          quality
+        )
+      }
+      img.onerror = (error) => reject(error)
+    }
+    reader.onerror = (error) => reject(error)
+  })
+}
+
 export const entrepriseService = {
   // Obtenir mon entreprise
   getMonEntreprise: async (): Promise<Entreprise> => {
@@ -72,16 +117,21 @@ export const entrepriseService = {
     return response.data
   },
 
-  // Upload logo d'entreprise
+  // ⭐ UPLOAD DU LOGO AVEC COMPRESSION AUTOMATIQUE
   uploadLogo: async (file: File): Promise<{ message: string; logo_url: string }> => {
-    const formData = new FormData()
-    formData.append('fichier', file)
-    const response = await api.post('/entreprises/me/logo', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-    return response.data
+    try {
+      // On compresse l'image avant de l'envoyer
+      const compressedFile = await compresserImage(file)
+      
+      const formData = new FormData()
+      formData.append('fichier', compressedFile)
+      
+      const response = await api.post('/entreprises/me/logo', formData)
+      return response.data
+    } catch (error) {
+      console.error('❌ Erreur lors de la compression ou de l\'envoi du logo:', error)
+      throw error
+    }
   },
 
   // Obtenir mes offres
