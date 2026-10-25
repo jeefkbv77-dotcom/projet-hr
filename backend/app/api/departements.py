@@ -12,6 +12,9 @@ from app.models.entreprise import Entreprise
 from app.models.departement import Departement
 from pydantic import BaseModel, field_validator
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/departements", tags=["departements"])
 
@@ -48,7 +51,7 @@ class DepartementResponse(BaseModel):
         from_attributes = True
 
 
-# ⭐ CORRECTION : ACCEPTE LES DEUX URLS (avec et sans slash)
+# ⭐ ACCEPTE LES DEUX URLS (avec et sans slash)
 @router.get("/", response_model=List[DepartementResponse])
 @router.get("", response_model=List[DepartementResponse])
 async def get_departements(
@@ -56,43 +59,84 @@ async def get_departements(
     db: Session = Depends(get_db)
 ):
     """
-    Récupérer tous les départements de l'entreprise connectée
-    Supporte les deux URLs: /api/departements/ et /api/departements
+    Récupérer tous les départements de l'entreprise connectée.
+    Supporte les deux URLs : /api/departements/ et /api/departements
     """
     try:
-        print(f"🔍 Récupération des départements pour {current_user.email} (role: {current_user.role})")
+        logger.info(
+            f"🔍 [/api/departements] user_id={current_user.id}, "
+            f"email={current_user.email}, role={current_user.role}"
+        )
         
-        # ADMIN - voit tous les départements
+        # ─────────────────────────────────────────────
+        # ADMIN → voit tous les départements
+        # ─────────────────────────────────────────────
         if current_user.role == RoleEnum.ADMIN:
             departements = db.query(Departement).all()
-            print(f"📊 {len(departements)} départements trouvés (admin)")
+            logger.info(f"📊 [/api/departements] ADMIN → {len(departements)} départements totaux")
             return departements
         
-        # ENTREPRISE - voit ses propres départements
+        # ─────────────────────────────────────────────
+        # ENTREPRISE → voit ses propres départements
+        # ─────────────────────────────────────────────
         if current_user.role == RoleEnum.ENTREPRISE:
-            entreprise = db.query(Entreprise).filter(Entreprise.utilisateur_id == current_user.id).first()
+            entreprise = db.query(Entreprise).filter(
+                Entreprise.utilisateur_id == current_user.id
+            ).first()
+            
             if not entreprise:
-                print(f"⚠️ Aucune entreprise pour l'utilisateur {current_user.id}")
+                logger.warning(
+                    f"⚠️ [/api/departements] Aucune entreprise pour "
+                    f"utilisateur_id={current_user.id} → renvoi []"
+                )
                 return []
             
-            print(f"✅ Entreprise trouvée: {entreprise.nom} (ID: {entreprise.id})")
-            departements = db.query(Departement).filter(Departement.entreprise_id == entreprise.id).all()
-            print(f"📊 {len(departements)} départements trouvés")
+            logger.info(
+                f"✅ [/api/departements] Entreprise: {entreprise.nom} "
+                f"(ID={entreprise.id})"
+            )
+            
+            departements = db.query(Departement).filter(
+                Departement.entreprise_id == entreprise.id
+            ).all()
+            
+            logger.info(
+                f"📊 [/api/departements] {len(departements)} départements "
+                f"pour entreprise_id={entreprise.id}"
+            )
             return departements
         
-        # CANDIDAT - ne voit pas les départements
+        # ─────────────────────────────────────────────
+        # CANDIDAT → aucun accès
+        # ─────────────────────────────────────────────
         if current_user.role == RoleEnum.CANDIDAT:
-            print(f"⚠️ Candidat {current_user.email} tente d'accéder aux départements")
+            logger.warning(
+                f"⚠️ [/api/departements] Candidat {current_user.email} "
+                f"tente d'accéder aux départements → renvoi []"
+            )
             return []
         
-        # Par défaut, retourner une liste vide
+        # ─────────────────────────────────────────────
+        # Rôle inconnu → aucun accès
+        # ─────────────────────────────────────────────
+        logger.warning(
+            f"⚠️ [/api/departements] Rôle non autorisé: {current_user.role}"
+        )
         return []
         
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"❌ Erreur GET departements: {e}")
+        # ⭐⭐⭐ CORRECTION CRITIQUE ⭐⭐⭐
+        # Ne PAS masquer l'erreur en retournant []
+        # Sinon le frontend reçoit 200 [] et on ne voit jamais le vrai problème
+        logger.error(f"❌ [/api/departements] Erreur: {e}")
         import traceback
         traceback.print_exc()
-        return []
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la récupération des départements: {str(e)}"
+        )
 
 
 @router.post("/", response_model=DepartementResponse, status_code=status.HTTP_201_CREATED)
@@ -105,17 +149,21 @@ async def create_departement(
     Créer un nouveau département (Entreprise uniquement)
     """
     try:
-        print(f"📝 Création d'un département pour {current_user.email}")
+        logger.info(f"📝 [/api/departements POST] Création par {current_user.email}")
         
         # Récupérer l'entreprise
-        entreprise = db.query(Entreprise).filter(Entreprise.utilisateur_id == current_user.id).first()
+        entreprise = db.query(Entreprise).filter(
+            Entreprise.utilisateur_id == current_user.id
+        ).first()
         if not entreprise:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Profil entreprise non trouvé"
             )
         
-        print(f"✅ Entreprise trouvée: {entreprise.nom} (ID: {entreprise.id})")
+        logger.info(
+            f"✅ Entreprise trouvée: {entreprise.nom} (ID={entreprise.id})"
+        )
         
         # Vérifier si le département existe déjà
         existing = db.query(Departement).filter(
@@ -140,7 +188,9 @@ async def create_departement(
         db.commit()
         db.refresh(departement)
         
-        print(f"✅ Département créé: {departement.nom} (ID: {departement.id})")
+        logger.info(
+            f"✅ Département créé: {departement.nom} (ID={departement.id})"
+        )
         
         return departement
         
@@ -148,10 +198,13 @@ async def create_departement(
         raise
     except Exception as e:
         db.rollback()
-        print(f"❌ Erreur POST departement: {e}")
+        logger.error(f"❌ [/api/departements POST] Erreur: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 
 @router.put("/{departement_id}", response_model=DepartementResponse)
@@ -165,7 +218,9 @@ async def update_departement(
     Mettre à jour un département (Entreprise uniquement)
     """
     try:
-        departement = db.query(Departement).filter(Departement.id == departement_id).first()
+        departement = db.query(Departement).filter(
+            Departement.id == departement_id
+        ).first()
         if not departement:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -173,7 +228,9 @@ async def update_departement(
             )
         
         # Vérifier l'accès
-        entreprise = db.query(Entreprise).filter(Entreprise.utilisateur_id == current_user.id).first()
+        entreprise = db.query(Entreprise).filter(
+            Entreprise.utilisateur_id == current_user.id
+        ).first()
         if not entreprise or departement.entreprise_id != entreprise.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -185,14 +242,18 @@ async def update_departement(
         db.commit()
         db.refresh(departement)
         
+        logger.info(f"✅ Département {departement.id} mis à jour")
         return departement
         
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        print(f"❌ Erreur PUT departement: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ [/api/departements PUT] Erreur: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 
 @router.delete("/{departement_id}")
@@ -205,7 +266,9 @@ async def delete_departement(
     Supprimer un département (Entreprise uniquement)
     """
     try:
-        departement = db.query(Departement).filter(Departement.id == departement_id).first()
+        departement = db.query(Departement).filter(
+            Departement.id == departement_id
+        ).first()
         if not departement:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -213,7 +276,9 @@ async def delete_departement(
             )
         
         # Vérifier l'accès
-        entreprise = db.query(Entreprise).filter(Entreprise.utilisateur_id == current_user.id).first()
+        entreprise = db.query(Entreprise).filter(
+            Entreprise.utilisateur_id == current_user.id
+        ).first()
         if not entreprise or departement.entreprise_id != entreprise.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -223,11 +288,15 @@ async def delete_departement(
         db.delete(departement)
         db.commit()
         
+        logger.info(f"✅ Département {departement_id} supprimé")
         return {"message": "Département supprimé avec succès"}
         
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        print(f"❌ Erreur DELETE departement: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ [/api/departements DELETE] Erreur: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )

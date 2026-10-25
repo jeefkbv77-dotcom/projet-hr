@@ -20,9 +20,10 @@ import { useNotificationStore } from '@/store/useStore'
 import { useAuthStore } from '@/store/useStore'
 import { candidatureService } from '@/services/candidatureService'
 import { candidatService } from '@/services/candidatService'
+import { departementService } from '@/services/departementService'
 import { Link, useNavigate } from 'react-router-dom'
-// ⭐ IMPORTS DEPUIS api.ts
-import { getToken, getCandidatPhotoUrl, getEntrepriseLogoUrl } from '@/services/api'
+// ⭐ IMPORTS DEPUIS api.ts — API_ORIGIN sert pour les URLs absolues (CV/LM/profil)
+import { getToken, getCandidatPhotoUrl, getEntrepriseLogoUrl, API_ORIGIN } from '@/services/api'
 
 // Composant Skeleton fallback
 const SkeletonLoader = ({ className = '' }: { className?: string }) => (
@@ -204,7 +205,7 @@ const DashboardEntreprise = () => {
     }
   }
 
-  // ⭐ CHARGER LES CANDIDATS RECOMMANDÉS
+  // ⭐ CHARGER LES CANDIDATS RECOMMANDÉS — utilise API_ORIGIN pour les URLs absolues
   const chargerCandidatsRecommandes = async () => {
     setLoadingRecommandations(true)
     try {
@@ -220,12 +221,12 @@ const DashboardEntreprise = () => {
         return
       }
       
-      // Récupérer les candidats recommandés pour chaque offre
+      // ⭐ URL ABSOLUE via API_ORIGIN (fonctionne en prod Render)
       const offresAvecCandidatures = await Promise.all(
         offres.slice(0, 3).map(async (offre) => {
           try {
             const response = await fetch(
-              `/api/offres/${offre.id}/candidats-recommandes?limit=3`,
+              `${API_ORIGIN}/api/offres/${offre.id}/candidats-recommandes?limit=3`,
               {
                 headers: { 
                   'Authorization': `Bearer ${token}`,
@@ -282,7 +283,7 @@ const DashboardEntreprise = () => {
     }
   }, [offres])
 
-  // ⭐ VOIR LE CV D'UN CANDIDAT
+  // ⭐ VOIR LE CV D'UN CANDIDAT — URL ABSOLUE via API_ORIGIN
   const voirCV = (candidatId: number) => {
     if (!verifyToken()) return
     
@@ -292,7 +293,7 @@ const DashboardEntreprise = () => {
       navigate('/connexion')
       return
     }
-    const url = `/api/candidats/${candidatId}/cv?token=${encodeURIComponent(token)}&t=${Date.now()}`
+    const url = `${API_ORIGIN}/api/candidats/${candidatId}/cv?token=${encodeURIComponent(token)}&t=${Date.now()}`
     setCvUrl(url)
     setShowCVModal(true)
   }
@@ -320,7 +321,7 @@ const DashboardEntreprise = () => {
     }
   }
 
-  // ⭐ VOIR LA LETTRE DE MOTIVATION
+  // ⭐ VOIR LA LETTRE DE MOTIVATION — URL ABSOLUE via API_ORIGIN
   const voirLettreMotivation = (candidatId: number) => {
     if (!verifyToken()) return
     
@@ -330,36 +331,21 @@ const DashboardEntreprise = () => {
       navigate('/connexion')
       return
     }
-    const url = `/api/candidats/${candidatId}/lettre-motivation?token=${encodeURIComponent(token)}&t=${Date.now()}`
+    const url = `${API_ORIGIN}/api/candidats/${candidatId}/lettre-motivation?token=${encodeURIComponent(token)}&t=${Date.now()}`
     setLmUrl(url)
     setShowLMModal(true)
   }
 
-  // ⭐ Fonction utilitaire : charger les départements (robuste)
+  // ⭐ CORRECTION MAJEURE : utiliser departementService (axios) au lieu de fetch('/api/...')
+  // Ceci bénéficie du baseURL configuré dans api.ts → fonctionne en prod Render
   const fetchDepartements = async (): Promise<{ id: number; nom: string }[]> => {
-    const token = getToken()
-    if (!token) return []
-    
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-    
     try {
-      let res = await fetch('/api/departements/', { headers })
-      if (!res.ok) {
-        res = await fetch('/api/departements', { headers })
-      }
-      if (!res.ok) {
-        console.warn('⚠️ Impossible de charger les départements, status:', res.status)
-        return []
-      }
-      const data = await res.json()
-      const liste = normaliserListe(data)
-      console.log(`✅ ${liste.length} départements chargés`)
-      return liste
-    } catch (e) {
-      console.error('❌ Erreur chargement départements:', e)
+      console.log('🟡 [fetchDepartements] appel via departementService.getDepartements()')
+      const data = await departementService.getDepartements()
+      console.log(`✅ [fetchDepartements] ${data.length} départements reçus`, data)
+      return normaliserListe(data).map((d: any) => ({ id: d.id, nom: d.nom }))
+    } catch (e: any) {
+      console.error('🔴 [fetchDepartements] erreur:', e?.response?.status, e?.message)
       return []
     }
   }
@@ -381,7 +367,7 @@ const DashboardEntreprise = () => {
     }
   }
 
-  // ⭐ NOUVEAU : charger uniquement ce qui est nécessaire pour l'embauche
+  // ⭐ Charger uniquement ce qui est nécessaire pour l'embauche
   const loadConversionData = async () => {
     setLoadingConversionData(true)
     try {
@@ -576,7 +562,7 @@ const DashboardEntreprise = () => {
     }
   }
 
-  // ⭐ VOIR LE PROFIL COMPLET D'UN CANDIDAT
+  // ⭐ VOIR LE PROFIL COMPLET D'UN CANDIDAT — URL ABSOLUE via API_ORIGIN
   const voirCandidatComplet = async (candidatId: number) => {
     if (!verifyToken()) return
     
@@ -590,7 +576,7 @@ const DashboardEntreprise = () => {
         return
       }
       
-      const response = await fetch(`/api/candidats/${candidatId}/complet`, {
+      const response = await fetch(`${API_ORIGIN}/api/candidats/${candidatId}/complet`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -614,7 +600,7 @@ const DashboardEntreprise = () => {
     }
   }
 
-  // ⭐ EMBAUCHER UN CANDIDAT
+  // ⭐ EMBAUCHER UN CANDIDAT — envoie null au lieu de 0
   const handleConvertir = async (candidatureId: number) => {
     if (!verifyToken()) return
     
@@ -633,7 +619,16 @@ const DashboardEntreprise = () => {
 
     setConversionLoading(true)
     try {
-      await candidatureService.convertirEnEmploye(candidatureId, convertData)
+      // ⭐ Envoyer null au lieu de 0 pour les FK optionnelles
+      const payload = {
+        poste_id: convertData.poste_id,
+        departement_id: convertData.departement_id > 0 ? convertData.departement_id : null,
+        contrat_id: convertData.contrat_id > 0 ? convertData.contrat_id : null,
+        date_embauche: convertData.date_embauche,
+        titre_poste: convertData.titre_poste,
+      }
+      
+      await candidatureService.convertirEnEmploye(candidatureId, payload as any)
       afficherNotification('✅ Candidat converti en employé avec succès !', 'success')
       
       setShowConvertModal(false)
@@ -1196,14 +1191,14 @@ const DashboardEntreprise = () => {
                       </h4>
                       <div className="flex gap-3">
                         <button
-                          onClick={() => window.open(`/api/candidats/${candidatDetail.id}/cv?token=${encodeURIComponent(getToken() || '')}`, '_blank')}
+                          onClick={() => window.open(`${API_ORIGIN}/api/candidats/${candidatDetail.id}/cv?token=${encodeURIComponent(getToken() || '')}`, '_blank')}
                           className="px-4 py-2 bg-primary-500/10 hover:bg-primary-500/20 text-primary-600 dark:text-primary-400 rounded-lg flex items-center gap-2 transition-colors"
                         >
                           <Eye className="w-4 h-4" />
                           Voir le CV
                         </button>
                         <button
-                          onClick={() => window.open(`/api/candidats/${candidatDetail.id}/cv?token=${encodeURIComponent(getToken() || '')}`, '_blank')}
+                          onClick={() => window.open(`${API_ORIGIN}/api/candidats/${candidatDetail.id}/cv?token=${encodeURIComponent(getToken() || '')}`, '_blank')}
                           className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center gap-2 transition-colors"
                         >
                           <Download className="w-4 h-4" />
@@ -1222,14 +1217,14 @@ const DashboardEntreprise = () => {
                       </h4>
                       <div className="flex gap-3">
                         <button
-                          onClick={() => window.open(`/api/candidats/${candidatDetail.id}/lettre-motivation?token=${encodeURIComponent(getToken() || '')}`, '_blank')}
+                          onClick={() => window.open(`${API_ORIGIN}/api/candidats/${candidatDetail.id}/lettre-motivation?token=${encodeURIComponent(getToken() || '')}`, '_blank')}
                           className="px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-lg flex items-center gap-2 transition-colors"
                         >
                           <Eye className="w-4 h-4" />
                           Voir la lettre
                         </button>
                         <button
-                          onClick={() => window.open(`/api/candidats/${candidatDetail.id}/lettre-motivation?token=${encodeURIComponent(getToken() || '')}`, '_blank')}
+                          onClick={() => window.open(`${API_ORIGIN}/api/candidats/${candidatDetail.id}/lettre-motivation?token=${encodeURIComponent(getToken() || '')}`, '_blank')}
                           className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center gap-2 transition-colors"
                         >
                           <Download className="w-4 h-4" />

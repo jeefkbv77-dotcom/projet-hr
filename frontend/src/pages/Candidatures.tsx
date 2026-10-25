@@ -21,7 +21,9 @@ import { candidatureService, Candidature, CandidatureUpdate } from '@/services/c
 import { employeService } from '@/services/employeService'
 import { offreService } from '@/services/offreService'
 import { candidatService } from '@/services/candidatService'
-import { getToken } from '@/services/api'
+import { departementService } from '@/services/departementService'
+// ⭐ API_ORIGIN sert pour les URLs absolues (CV/LM/profil/photo)
+import { getToken, API_ORIGIN } from '@/services/api'
 import { Link, useNavigate } from 'react-router-dom'
 
 // Composant Skeleton fallback
@@ -36,7 +38,7 @@ const normaliserListe = (data: any): any[] => {
   return data.departements || data.data || data.items || data.results || []
 }
 
-// ⭐ COMPOSANT PHOTO AVEC FALLBACK - CORRIGÉ AVEC getToken()
+// ⭐ COMPOSANT PHOTO AVEC FALLBACK - CORRIGÉ AVEC API_ORIGIN
 const CandidatPhoto = ({ 
   candidatId, 
   prenom, 
@@ -70,7 +72,8 @@ const CandidatPhoto = ({
       }
       
       try {
-        const response = await fetch(`/api/candidats/${candidatId}/photo?t=${Date.now()}`, {
+        // ⭐ URL ABSOLUE via API_ORIGIN — fonctionne en prod Render
+        const response = await fetch(`${API_ORIGIN}/api/candidats/${candidatId}/photo?t=${Date.now()}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -145,7 +148,7 @@ const CandidatPhoto = ({
   )
 }
 
-// ⭐ COMPOSANT POUR AFFICHER LE DOCUMENT (CV ou LM)
+// ⭐ COMPOSANT POUR AFFICHER LE DOCUMENT (CV ou LM) — CORRIGÉ AVEC API_ORIGIN
 const DocumentViewer = ({ 
   url, 
   title, 
@@ -327,36 +330,21 @@ const Candidatures = () => {
     return true
   }
 
-  // ⭐ Fonction utilitaire : charger les départements (robuste)
+  // ⭐ CORRECTION MAJEURE : utiliser departementService (axios) au lieu de fetch('/api/...')
+  // Ceci bénéficie du baseURL configuré dans api.ts → fonctionne en prod Render
   const fetchDepartements = async (): Promise<{ id: number; nom: string }[]> => {
-    const token = getToken()
-    if (!token) return []
-    
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-    
     try {
-      let res = await fetch('/api/departements/', { headers })
-      if (!res.ok) {
-        res = await fetch('/api/departements', { headers })
-      }
-      if (!res.ok) {
-        console.warn('⚠️ Impossible de charger les départements, status:', res.status)
-        return []
-      }
-      const data = await res.json()
-      const liste = normaliserListe(data)
-      console.log(`✅ ${liste.length} départements chargés`)
-      return liste
-    } catch (e) {
-      console.error('❌ Erreur chargement départements:', e)
+      console.log('🟡 [fetchDepartements] appel via departementService.getDepartements()')
+      const data = await departementService.getDepartements()
+      console.log(`✅ [fetchDepartements] ${data.length} départements reçus`, data)
+      return normaliserListe(data).map((d: any) => ({ id: d.id, nom: d.nom }))
+    } catch (e: any) {
+      console.error('🔴 [fetchDepartements] erreur:', e?.response?.status, e?.message)
       return []
     }
   }
 
-  // ⭐ NOUVEAU : charger les listes du modal d'embauche
+  // ⭐ Charger les listes du modal d'embauche
   const loadConversionData = async () => {
     setLoadingConversionData(true)
     try {
@@ -376,7 +364,7 @@ const Candidatures = () => {
     }
   }
 
-  // ⭐ FETCH DATA - CORRIGÉ AVEC getToken()
+  // ⭐ FETCH DATA - CORRIGÉ AVEC API_ORIGIN
   const fetchData = async () => {
     // ⭐ Vérifier le token AVANT de faire la requête
     if (!verifyToken()) {
@@ -395,7 +383,7 @@ const Candidatures = () => {
         offreService.getContrats()
       ])
       
-      // ⭐ Ajouter les scores et infos supplémentaires
+      // ⭐ Ajouter les scores et infos supplémentaires — URLs absolues via API_ORIGIN
       const candidaturesAvecScores = await Promise.all(
         candidaturesData.map(async (candidature) => {
           try {
@@ -408,7 +396,7 @@ const Candidatures = () => {
             
             try {
               const scoreResponse = await fetch(
-                `/api/candidats/${candidature.candidat_id}/score/${candidature.offre_id}`,
+                `${API_ORIGIN}/api/candidats/${candidature.candidat_id}/score/${candidature.offre_id}`,
                 {
                   headers: { 
                     'Authorization': `Bearer ${token}`,
@@ -427,7 +415,7 @@ const Candidatures = () => {
             // Vérifier si le candidat a une lettre de motivation
             try {
               const lmResponse = await fetch(
-                `/api/candidats/${candidature.candidat_id}/lettre-motivation`,
+                `${API_ORIGIN}/api/candidats/${candidature.candidat_id}/lettre-motivation`,
                 {
                   headers: { 'Authorization': `Bearer ${token}` }
                 }
@@ -456,7 +444,7 @@ const Candidatures = () => {
       setPostes(postesData)
       setContrats(contratsData)
       
-      // ⭐ Récupérer les départements - via la fonction robuste
+      // ⭐ Récupérer les départements - via departementService
       const departementsData = await fetchDepartements()
       setDepartements(departementsData)
     } catch (error: any) {
@@ -558,7 +546,7 @@ const Candidatures = () => {
     }
   }
 
-  // ⭐ VOIR LE PROFIL COMPLET DU CANDIDAT - CORRIGÉ
+  // ⭐ VOIR LE PROFIL COMPLET DU CANDIDAT - URL ABSOLUE via API_ORIGIN
   const voirCandidatComplet = async (candidatId: number) => {
     if (!verifyToken()) return
     
@@ -572,7 +560,7 @@ const Candidatures = () => {
         return
       }
       
-      const response = await fetch(`/api/candidats/${candidatId}/complet`, {
+      const response = await fetch(`${API_ORIGIN}/api/candidats/${candidatId}/complet`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -596,7 +584,7 @@ const Candidatures = () => {
     }
   }
 
-  // ⭐ VOIR LE CV - CORRIGÉ
+  // ⭐ VOIR LE CV - URL ABSOLUE via API_ORIGIN
   const voirCV = (candidatId: number) => {
     if (!verifyToken()) return
     
@@ -606,12 +594,12 @@ const Candidatures = () => {
       navigate('/connexion')
       return
     }
-    const url = `/api/candidats/${candidatId}/cv?token=${encodeURIComponent(token)}&t=${Date.now()}`
+    const url = `${API_ORIGIN}/api/candidats/${candidatId}/cv?token=${encodeURIComponent(token)}&t=${Date.now()}`
     setCvUrl(url)
     setShowCVModal(true)
   }
 
-  // ⭐ VOIR LA LETTRE DE MOTIVATION - CORRIGÉ
+  // ⭐ VOIR LA LETTRE DE MOTIVATION - URL ABSOLUE via API_ORIGIN
   const voirLettreMotivation = (candidatId: number) => {
     if (!verifyToken()) return
     
@@ -621,12 +609,12 @@ const Candidatures = () => {
       navigate('/connexion')
       return
     }
-    const url = `/api/candidats/${candidatId}/lettre-motivation?token=${encodeURIComponent(token)}&t=${Date.now()}`
+    const url = `${API_ORIGIN}/api/candidats/${candidatId}/lettre-motivation?token=${encodeURIComponent(token)}&t=${Date.now()}`
     setLmUrl(url)
     setShowLMModal(true)
   }
 
-  // ⭐ CONVERTIR EN EMPLOYÉ - CORRIGÉ
+  // ⭐ CONVERTIR EN EMPLOYÉ - envoie null au lieu de 0 pour les FK optionnelles
   const handleConvertir = async (candidatureId: number) => {
     if (!verifyToken()) return
     
@@ -652,7 +640,16 @@ const Candidatures = () => {
         return
       }
       
-      await candidatureService.convertirEnEmploye(candidatureId, convertData)
+      // ⭐ Envoyer null au lieu de 0 pour les FK optionnelles
+      const payload = {
+        poste_id: convertData.poste_id,
+        departement_id: convertData.departement_id > 0 ? convertData.departement_id : null,
+        contrat_id: convertData.contrat_id > 0 ? convertData.contrat_id : null,
+        date_embauche: convertData.date_embauche,
+        titre_poste: convertData.titre_poste,
+      }
+      
+      await candidatureService.convertirEnEmploye(candidatureId, payload as any)
       afficherNotification('✅ Candidat converti en employé avec succès !', 'success')
       
       setShowConvertModal(false)
@@ -1294,7 +1291,7 @@ const Candidatures = () => {
                         <button
                           onClick={() => {
                             const token = getToken()
-                            const url = `/api/candidats/${candidatComplet.id}/cv?token=${encodeURIComponent(token || '')}`
+                            const url = `${API_ORIGIN}/api/candidats/${candidatComplet.id}/cv?token=${encodeURIComponent(token || '')}`
                             window.open(url, '_blank')
                           }}
                           className="px-4 py-2 bg-primary-500/10 hover:bg-primary-500/20 text-primary-600 dark:text-primary-400 rounded-lg flex items-center gap-2 transition-colors"
@@ -1305,7 +1302,7 @@ const Candidatures = () => {
                         <button
                           onClick={() => {
                             const token = getToken()
-                            const url = `/api/candidats/${candidatComplet.id}/cv?token=${encodeURIComponent(token || '')}`
+                            const url = `${API_ORIGIN}/api/candidats/${candidatComplet.id}/cv?token=${encodeURIComponent(token || '')}`
                             window.open(url, '_blank')
                           }}
                           className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center gap-2 transition-colors"
@@ -1328,7 +1325,7 @@ const Candidatures = () => {
                         <button
                           onClick={() => {
                             const token = getToken()
-                            const url = `/api/candidats/${candidatComplet.id}/lettre-motivation?token=${encodeURIComponent(token || '')}`
+                            const url = `${API_ORIGIN}/api/candidats/${candidatComplet.id}/lettre-motivation?token=${encodeURIComponent(token || '')}`
                             window.open(url, '_blank')
                           }}
                           className="px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-lg flex items-center gap-2 transition-colors"
@@ -1339,7 +1336,7 @@ const Candidatures = () => {
                         <button
                           onClick={() => {
                             const token = getToken()
-                            const url = `/api/candidats/${candidatComplet.id}/lettre-motivation?token=${encodeURIComponent(token || '')}`
+                            const url = `${API_ORIGIN}/api/candidats/${candidatComplet.id}/lettre-motivation?token=${encodeURIComponent(token || '')}`
                             window.open(url, '_blank')
                           }}
                           className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center gap-2 transition-colors"

@@ -11,6 +11,7 @@ from app.models.entreprise import Entreprise
 from app.models.offre import OffreEmploi
 from app.models.candidature import Candidature, StatutCandidatureEnum
 from app.models.employe import Employe
+from app.models.departement import Departement  # ⭐ AJOUTÉ pour la vérification
 from app.schemas.candidature import CandidatureResponse, CandidatureUpdate
 from app.services.sync_service import sync_service  # ⭐ AJOUTÉ
 from pydantic import BaseModel
@@ -76,8 +77,8 @@ async def get_mes_candidatures(
             "candidat_prenom": candidat.prenom if candidat else "",
             "offre_titre": offre.titre if offre else "",
             "entreprises_nom": entreprise.nom,
-            "a_cv": candidat.a_cv if candidat else False,  # ⭐ AJOUTÉ
-            "a_lettre_motivation": a_lettre  # ⭐ AJOUTÉ
+            "a_cv": candidat.a_cv if candidat else False,
+            "a_lettre_motivation": a_lettre
         }
         result.append(candidature_dict)
     
@@ -128,8 +129,8 @@ async def get_candidatures_by_offre(
             "candidat_nom": candidat.nom if candidat else "",
             "candidat_prenom": candidat.prenom if candidat else "",
             "offre_titre": offre.titre,
-            "a_cv": candidat.a_cv if candidat else False,  # ⭐ AJOUTÉ
-            "a_lettre_motivation": a_lettre  # ⭐ AJOUTÉ
+            "a_cv": candidat.a_cv if candidat else False,
+            "a_lettre_motivation": a_lettre
         }
         result.append(candidature_dict)
     
@@ -187,8 +188,8 @@ async def get_candidature(
         "candidat_nom": candidat.nom if candidat else "",
         "candidat_prenom": candidat.prenom if candidat else "",
         "offre_titre": offre.titre if offre else "",
-        "a_cv": candidat.a_cv if candidat else False,  # ⭐ AJOUTÉ
-        "a_lettre_motivation": a_lettre  # ⭐ AJOUTÉ
+        "a_cv": candidat.a_cv if candidat else False,
+        "a_lettre_motivation": a_lettre
     }
     
     return candidature_dict
@@ -250,8 +251,8 @@ async def update_candidature(
         "candidat_nom": candidat.nom if candidat else "",
         "candidat_prenom": candidat.prenom if candidat else "",
         "offre_titre": offre.titre if offre else "",
-        "a_cv": candidat.a_cv if candidat else False,  # ⭐ AJOUTÉ
-        "a_lettre_motivation": a_lettre  # ⭐ AJOUTÉ
+        "a_cv": candidat.a_cv if candidat else False,
+        "a_lettre_motivation": a_lettre
     }
     
     return candidature_dict
@@ -267,10 +268,17 @@ async def convertir_candidat_en_employe(
     """
     Convertir un candidat accepté en employé
     
-    ⭐⭐ CORRECTION: Utilisation de sync_service au lieu de ontology_service directement ⭐⭐
+    ⭐⭐ CORRECTIONS APPLIQUÉES ⭐⭐
+    1. Conversion 0 → None pour departement_id, contrat_id, poste_id
+       (évite l'IntegrityError sur la contrainte FK employes_ibfk_3)
+    2. Vérification que le département appartient bien à l'entreprise
+    3. Logs détaillés pour diagnostiquer
+    4. Utilisation de sync_service pour la synchronisation OWL
     """
     try:
+        # ============================================
         # 1. Vérifier la candidature
+        # ============================================
         candidature = db.query(Candidature).filter(Candidature.id == candidature_id).first()
         if not candidature:
             raise HTTPException(
@@ -284,7 +292,9 @@ async def convertir_candidat_en_employe(
                 detail="Seul un candidat accepté peut être converti en employé"
             )
         
+        # ============================================
         # 2. Vérifier l'offre et l'entreprise
+        # ============================================
         offre = db.query(OffreEmploi).filter(OffreEmploi.id == candidature.offre_id).first()
         if not offre:
             raise HTTPException(
@@ -305,7 +315,9 @@ async def convertir_candidat_en_employe(
                 detail="Vous n'avez pas accès à cette candidature"
             )
         
+        # ============================================
         # 3. Récupérer le candidat
+        # ============================================
         candidat = db.query(Candidat).filter(Candidat.id == candidature.candidat_id).first()
         if not candidat:
             raise HTTPException(
@@ -313,7 +325,9 @@ async def convertir_candidat_en_employe(
                 detail="Candidat non trouvé"
             )
         
+        # ============================================
         # 4. Vérifier si l'utilisateur a déjà un employé
+        # ============================================
         existing_employe = db.query(Employe).filter(Employe.utilisateur_id == candidat.utilisateur_id).first()
         if existing_employe:
             raise HTTPException(
@@ -321,7 +335,40 @@ async def convertir_candidat_en_employe(
                 detail="Cet utilisateur est déjà un employé"
             )
         
-        # 5. Créer l'employé en base de données
+        # ============================================
+        # 5. ⭐⭐ CORRECTION CRITIQUE: Convertir 0 → None ⭐⭐
+        # ============================================
+        # Le frontend envoie parfois 0 quand aucun département/contrat n'est sélectionné.
+        # Or 0 n'existe pas dans les tables departements/contrats/postes → 
+        # MySQL rejette avec "Cannot add or update a child row: FK constraint fails"
+        
+        departement_id = data.departement_id if data.departement_id and data.departement_id > 0 else None
+        contrat_id = data.contrat_id if data.contrat_id and data.contrat_id > 0 else None
+        poste_id = data.poste_id if data.poste_id and data.poste_id > 0 else None
+        
+        # ⭐ Vérifier que le département existe ET appartient à l'entreprise
+        if departement_id:
+            dep_exists = db.query(Departement).filter(
+                Departement.id == departement_id,
+                Departement.entreprise_id == entreprise.id
+            ).first()
+            if not dep_exists:
+                logger.warning(
+                    f"⚠️ Département {departement_id} introuvable ou n'appartient pas "
+                    f"à l'entreprise {entreprise.id} → on force à None"
+                )
+                departement_id = None
+        
+        logger.info(
+            f"📋 Paramètres embauche reçus: "
+            f"poste_id={data.poste_id}→{poste_id}, "
+            f"departement_id={data.departement_id}→{departement_id}, "
+            f"contrat_id={data.contrat_id}→{contrat_id}"
+        )
+        
+        # ============================================
+        # 6. Créer l'employé en base de données
+        # ============================================
         utilisateur = db.query(Utilisateur).filter(Utilisateur.id == candidat.utilisateur_id).first()
         
         employe = Employe(
@@ -332,9 +379,9 @@ async def convertir_candidat_en_employe(
             email=utilisateur.email if utilisateur else None,
             telephone=candidat.telephone,
             adresse=candidat.adresse,
-            departement_id=data.departement_id,
-            poste_id=data.poste_id,
-            contrat_id=data.contrat_id,
+            departement_id=departement_id,   # ⭐ null si 0
+            poste_id=poste_id,               # ⭐ null si 0
+            contrat_id=contrat_id,           # ⭐ null si 0
             titre_poste=data.titre_poste,
             date_embauche=datetime.strptime(data.date_embauche, '%Y-%m-%d') if data.date_embauche else None
         )
@@ -342,7 +389,9 @@ async def convertir_candidat_en_employe(
         db.add(employe)
         db.flush()  # ⭐ Pour obtenir l'ID de l'employé
 
-        # 6. Mettre à jour le statut de l'utilisateur et de la candidature
+        # ============================================
+        # 7. Mettre à jour le statut de l'utilisateur et de la candidature
+        # ============================================
         if utilisateur:
             ancien_statut = utilisateur.statut_profil
             utilisateur.statut_profil = ProfilStatutEnum.EMPLOYE
@@ -363,12 +412,12 @@ async def convertir_candidat_en_employe(
         db.refresh(employe)
         
         # ============================================
-        # 7. ⭐⭐ CORRECTION: SYNC AVEC sync_service ⭐⭐
+        # 8. ⭐⭐ SYNC AVEC sync_service ⭐⭐
         # ============================================
+        sync_success = False
         try:
             logger.info(f"🔄 Synchronisation de l'employé {employe.prenom} {employe.nom} avec l'ontologie...")
             
-            # ⭐⭐ Utiliser sync_service au lieu de ontology_service directement ⭐⭐
             sync_success = sync_service.sync_employe(
                 employe_id=employe.id,
                 nom=employe.nom,
@@ -391,7 +440,6 @@ async def convertir_candidat_en_employe(
                 
                 for comp in competences_candidat:
                     try:
-                        # ⭐⭐ Utiliser sync_service pour les compétences ⭐⭐
                         sync_service.sync_employe_competence(
                             employe_id=employe.id,
                             competence_id=comp.competence_id,
@@ -409,12 +457,11 @@ async def convertir_candidat_en_employe(
             # On ne bloque pas la conversion si la sync échoue
         
         # ============================================
-        # 8. ⭐⭐ NOTIFICATION AUX AUTRES EMPLOYÉS ⭐⭐
+        # 9. ⭐⭐ NOTIFICATION AUX AUTRES EMPLOYÉS ⭐⭐
         # ============================================
         try:
-            # Notifier les autres employés de l'entreprise via WebSocket
             from app.api.messagerie_ws import manager
-            if manager.is_user_online(utilisateur.id):
+            if utilisateur and manager.is_user_online(utilisateur.id):
                 await manager.broadcast(
                     {
                         "action": "new_employee",
@@ -437,11 +484,17 @@ async def convertir_candidat_en_employe(
         except Exception as e:
             logger.warning(f"⚠️ Erreur notification WebSocket: {e}")
         
+        # ============================================
+        # 10. Réponse
+        # ============================================
         return {
             "message": "Candidat converti en employé avec succès",
             "employe_id": employe.id,
-            "synchronise": sync_success if 'sync_success' in locals() else False,
+            "synchronise": sync_success,
             "entreprise_nom": entreprise.nom,
+            "departement_id": employe.departement_id,  # ⭐ null si non fourni
+            "contrat_id": employe.contrat_id,          # ⭐ null si non fourni
+            "poste_id": employe.poste_id,              # ⭐ null si non fourni
             "utilisateur": {
                 "id": utilisateur.id,
                 "email": utilisateur.email,
@@ -457,6 +510,8 @@ async def convertir_candidat_en_employe(
     except Exception as e:
         db.rollback()
         logger.error(f"❌ Erreur lors de la conversion: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de la conversion: {str(e)}"
