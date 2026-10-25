@@ -18,7 +18,7 @@ import { adminService, Statistiques, Utilisateur, OntologyStatus } from '@/servi
 import { useNotificationStore } from '@/store/useStore'
 import { useAuthStore } from '@/store/useStore'
 // ⭐ IMPORTATIONS DEPUIS api.ts
-import { getToken, getCandidatPhotoUrl, getEntrepriseLogoUrl } from '@/services/api'
+import { getToken, getCandidatPhotoUrl, getEntrepriseLogoUrl, API_ORIGIN } from '@/services/api'
 
 // ⭐ COMPOSANT PHOTO (utilise les URLs publiques centralisées)
 const UserPhoto = ({ 
@@ -206,7 +206,7 @@ const DashboardAdmin = () => {
     }
   }
 
-  // ⭐ CORRECTION : URLs sans slash final
+  // ⭐ CORRECTION : Utiliser API_ORIGIN (URL complète du backend) et pas de slash final
   const chargerListes = async () => {
     if (!verifyToken()) return
 
@@ -223,9 +223,9 @@ const DashboardAdmin = () => {
       const headers = { 'Authorization': `Bearer ${currentToken}` }
       
       const [postesRes, contratsRes, competencesRes] = await Promise.all([
-        fetch('/api/postes', { headers }),
-        fetch('/api/contrats', { headers }),
-        fetch('/api/competences', { headers })
+        fetch(`${API_ORIGIN}/api/postes`, { headers }),
+        fetch(`${API_ORIGIN}/api/contrats`, { headers }),
+        fetch(`${API_ORIGIN}/api/competences`, { headers })
       ])
       
       if (postesRes.ok) setListePostes(await postesRes.json())
@@ -239,14 +239,14 @@ const DashboardAdmin = () => {
     }
   }
 
-  // ⭐ CORRECTION : URL sans slash final
+  // ⭐ CORRECTION : URL complète du backend
   const handleCreatePoste = async () => {
     if (!verifyToken()) return
 
     setIsCreating(true)
     try {
       const currentToken = getToken()
-      const response = await fetch('/api/postes', {
+      const response = await fetch(`${API_ORIGIN}/api/postes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -270,14 +270,14 @@ const DashboardAdmin = () => {
     }
   }
 
-  // ⭐ CORRECTION : URL sans slash final
+  // ⭐ CORRECTION : URL complète du backend
   const handleCreateContrat = async () => {
     if (!verifyToken()) return
 
     setIsCreating(true)
     try {
       const currentToken = getToken()
-      const response = await fetch('/api/contrats', {
+      const response = await fetch(`${API_ORIGIN}/api/contrats`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -301,14 +301,14 @@ const DashboardAdmin = () => {
     }
   }
 
-  // ⭐ CORRECTION : URL sans slash final
+  // ⭐ CORRECTION : URL complète du backend
   const handleCreateCompetence = async () => {
     if (!verifyToken()) return
 
     setIsCreating(true)
     try {
       const currentToken = getToken()
-      const response = await fetch('/api/competences', {
+      const response = await fetch(`${API_ORIGIN}/api/competences`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -332,14 +332,14 @@ const DashboardAdmin = () => {
     }
   }
 
-  // ⭐ CORRECTION : URLs sans slash final
+  // ⭐ CORRECTION : URL complète du backend
   const supprimerPoste = async (id: number) => {
     if (!verifyToken()) return
     if (!confirm('Supprimer ce poste ?')) return
     
     try {
       const currentToken = getToken()
-      const res = await fetch(`/api/postes/${id}`, {
+      const res = await fetch(`${API_ORIGIN}/api/postes/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${currentToken}` }
       })
@@ -361,7 +361,7 @@ const DashboardAdmin = () => {
     
     try {
       const currentToken = getToken()
-      const res = await fetch(`/api/contrats/${id}`, {
+      const res = await fetch(`${API_ORIGIN}/api/contrats/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${currentToken}` }
       })
@@ -383,7 +383,7 @@ const DashboardAdmin = () => {
     
     try {
       const currentToken = getToken()
-      const res = await fetch(`/api/competences/${id}`, {
+      const res = await fetch(`${API_ORIGIN}/api/competences/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${currentToken}` }
       })
@@ -414,7 +414,7 @@ const DashboardAdmin = () => {
       const endpoint = currentStatus ? 'desactiver' : 'activer'
       console.log(`🔄 ${endpoint} utilisateur ${userId}`)
       
-      const response = await fetch(`/api/admin/utilisateurs/${userId}/${endpoint}`, {
+      const response = await fetch(`${API_ORIGIN}/api/admin/utilisateurs/${userId}/${endpoint}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${currentToken}`,
@@ -452,7 +452,7 @@ const DashboardAdmin = () => {
     setActionLoading(true)
     try {
       const currentToken = getToken()
-      const response = await fetch(`/api/admin/utilisateurs/${userId}`, {
+      const response = await fetch(`${API_ORIGIN}/api/admin/utilisateurs/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${currentToken}`,
