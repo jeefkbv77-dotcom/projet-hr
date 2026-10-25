@@ -29,6 +29,13 @@ const SkeletonLoader = ({ className = '' }: { className?: string }) => (
   <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`} />
 )
 
+// ⭐ Helper robuste pour normaliser la réponse des départements
+const normaliserListe = (data: any): any[] => {
+  if (Array.isArray(data)) return data
+  if (!data) return []
+  return data.departements || data.data || data.items || data.results || []
+}
+
 const DashboardEntreprise = () => {
   const { utilisateur, estConnecte } = useAuthStore()
   const navigate = useNavigate()
@@ -86,6 +93,8 @@ const DashboardEntreprise = () => {
   const [showConvertModal, setShowConvertModal] = useState(false)
   const [selectedCandidature, setSelectedCandidature] = useState<any>(null)
   const [conversionLoading, setConversionLoading] = useState(false)
+  // ⭐ État de chargement des listes du modal d'embauche
+  const [loadingConversionData, setLoadingConversionData] = useState(false)
   
   // États pour les listes déroulantes
   const [postes, setPostes] = useState<{ id: number; titre: string }[]>([])
@@ -326,40 +335,69 @@ const DashboardEntreprise = () => {
     setShowLMModal(true)
   }
 
+  // ⭐ Fonction utilitaire : charger les départements (robuste)
+  const fetchDepartements = async (): Promise<{ id: number; nom: string }[]> => {
+    const token = getToken()
+    if (!token) return []
+    
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+    
+    try {
+      let res = await fetch('/api/departements/', { headers })
+      if (!res.ok) {
+        res = await fetch('/api/departements', { headers })
+      }
+      if (!res.ok) {
+        console.warn('⚠️ Impossible de charger les départements, status:', res.status)
+        return []
+      }
+      const data = await res.json()
+      const liste = normaliserListe(data)
+      console.log(`✅ ${liste.length} départements chargés`)
+      return liste
+    } catch (e) {
+      console.error('❌ Erreur chargement départements:', e)
+      return []
+    }
+  }
+
   const loadModalData = async () => {
     try {
-      const [postesData, contratsData, competencesData] = await Promise.all([
+      const [postesData, contratsData, competencesData, departementsData] = await Promise.all([
         offreService.getPostes(),
         offreService.getContrats(),
-        offreService.getCompetences()
+        offreService.getCompetences(),
+        fetchDepartements()
       ])
       setPostes(postesData)
       setContrats(contratsData)
       setCompetences(competencesData)
-      
-      try {
-        const token = getToken()
-        if (token) {
-          let depRes = await fetch('/api/departements/', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          
-          if (!depRes.ok) {
-            depRes = await fetch('/api/departements', {
-              headers: { 'Authorization': `Bearer ${token}` }
-            })
-          }
-          
-          if (depRes.ok) {
-            setDepartements(await depRes.json())
-          }
-        }
-      } catch (e) {
-        console.log('⚠️ Départements non récupérés')
-        setDepartements([])
-      }
+      setDepartements(departementsData)
     } catch (error) {
       console.error('❌ Erreur chargement données modal:', error)
+    }
+  }
+
+  // ⭐ NOUVEAU : charger uniquement ce qui est nécessaire pour l'embauche
+  const loadConversionData = async () => {
+    setLoadingConversionData(true)
+    try {
+      const [postesData, contratsData, departementsData] = await Promise.all([
+        offreService.getPostes(),
+        offreService.getContrats(),
+        fetchDepartements()
+      ])
+      setPostes(postesData)
+      setContrats(contratsData)
+      setDepartements(departementsData)
+    } catch (error) {
+      console.error('❌ Erreur chargement données embauche:', error)
+      afficherNotification('Erreur lors du chargement des listes', 'error')
+    } finally {
+      setLoadingConversionData(false)
     }
   }
 
@@ -620,8 +658,8 @@ const DashboardEntreprise = () => {
     }
   }
 
-  // ⭐ OUVRIR LE MODAL D'EMBAUCHE
-  const ouvrirModalEmbauche = (candidature: any) => {
+  // ⭐ OUVRIR LE MODAL D'EMBAUCHE - chargement des listes garanti
+  const ouvrirModalEmbauche = async (candidature: any) => {
     setSelectedCandidature(candidature)
     setConvertData({
       poste_id: 0,
@@ -631,6 +669,8 @@ const DashboardEntreprise = () => {
       titre_poste: ''
     })
     setShowConvertModal(true)
+    // ⭐ Charger les listes (postes, contrats, départements) à chaque ouverture
+    await loadConversionData()
   }
 
   const getCompatibiliteColor = (score: number) => {
@@ -1223,15 +1263,14 @@ const DashboardEntreprise = () => {
                   <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                     {candidatDetail.statut_candidature === 'ACCEPTEE' && (
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           const candidatureFake = {
                             id: candidatDetail.candidature_id || 1,
                             candidat_prenom: candidatDetail.prenom,
                             candidat_nom: candidatDetail.nom,
                             candidat_id: candidatDetail.id
                           }
-                          setSelectedCandidature(candidatureFake)
-                          setShowConvertModal(true)
+                          await ouvrirModalEmbauche(candidatureFake)
                         }}
                         className="flex-1 glass-button flex items-center justify-center gap-2"
                       >
@@ -1316,8 +1355,11 @@ const DashboardEntreprise = () => {
                     onChange={(e) => setConvertData({ ...convertData, poste_id: Number(e.target.value) })}
                     className="glass-input w-full"
                     required
+                    disabled={loadingConversionData}
                   >
-                    <option value={0}>Sélectionner un poste</option>
+                    <option value={0}>
+                      {loadingConversionData ? 'Chargement...' : 'Sélectionner un poste'}
+                    </option>
                     {postes.map(p => (
                       <option key={p.id} value={p.id}>{p.titre}</option>
                     ))}
@@ -1330,12 +1372,20 @@ const DashboardEntreprise = () => {
                     value={convertData.departement_id}
                     onChange={(e) => setConvertData({ ...convertData, departement_id: Number(e.target.value) })}
                     className="glass-input w-full"
+                    disabled={loadingConversionData}
                   >
-                    <option value={0}>Sélectionner un département</option>
+                    <option value={0}>
+                      {loadingConversionData ? 'Chargement...' : 'Sélectionner un département'}
+                    </option>
                     {departements.map(d => (
                       <option key={d.id} value={d.id}>{d.nom}</option>
                     ))}
                   </select>
+                  {!loadingConversionData && departements.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Aucun département disponible (champ optionnel)
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1344,8 +1394,11 @@ const DashboardEntreprise = () => {
                     value={convertData.contrat_id}
                     onChange={(e) => setConvertData({ ...convertData, contrat_id: Number(e.target.value) })}
                     className="glass-input w-full"
+                    disabled={loadingConversionData}
                   >
-                    <option value={0}>Sélectionner un contrat</option>
+                    <option value={0}>
+                      {loadingConversionData ? 'Chargement...' : 'Sélectionner un contrat'}
+                    </option>
                     {contrats.map(c => (
                       <option key={c.id} value={c.id}>{c.type_contrat}</option>
                     ))}
@@ -1388,7 +1441,7 @@ const DashboardEntreprise = () => {
                   </button>
                   <button
                     onClick={() => handleConvertir(selectedCandidature.id)}
-                    disabled={conversionLoading}
+                    disabled={conversionLoading || loadingConversionData}
                     className="flex-1 glass-button flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {conversionLoading ? (

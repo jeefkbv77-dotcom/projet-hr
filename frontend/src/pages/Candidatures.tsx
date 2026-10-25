@@ -29,6 +29,13 @@ const SkeletonLoader = ({ className = '' }: { className?: string }) => (
   <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`} />
 )
 
+// ⭐ Helper robuste pour normaliser la réponse des départements
+const normaliserListe = (data: any): any[] => {
+  if (Array.isArray(data)) return data
+  if (!data) return []
+  return data.departements || data.data || data.items || data.results || []
+}
+
 // ⭐ COMPOSANT PHOTO AVEC FALLBACK - CORRIGÉ AVEC getToken()
 const CandidatPhoto = ({ 
   candidatId, 
@@ -52,7 +59,6 @@ const CandidatPhoto = ({
     let objectUrl: string | null = null
     
     const fetchPhoto = async () => {
-      // ⭐ UTILISER getToken() AU LIEU DE localStorage.getItem('token')
       const token = getToken()
       
       if (!token) {
@@ -236,7 +242,6 @@ const Candidatures = () => {
   
   // ⭐ PROTECTION DE RÔLE - UNIQUEMENT ENTREPRISES
   useEffect(() => {
-    // Vérifier si l'utilisateur est connecté
     if (!estConnecte) {
       afficherNotification('Veuillez vous connecter pour accéder à cette page', 'error')
       navigate('/connexion')
@@ -273,6 +278,8 @@ const Candidatures = () => {
   
   // ⭐ ÉTAT POUR LA CONVERSION
   const [conversionLoading, setConversionLoading] = useState(false)
+  // ⭐ État de chargement des listes du modal d'embauche
+  const [loadingConversionData, setLoadingConversionData] = useState(false)
   const [convertData, setConvertData] = useState({
     poste_id: 0,
     departement_id: 0,
@@ -318,6 +325,55 @@ const Candidatures = () => {
       return false
     }
     return true
+  }
+
+  // ⭐ Fonction utilitaire : charger les départements (robuste)
+  const fetchDepartements = async (): Promise<{ id: number; nom: string }[]> => {
+    const token = getToken()
+    if (!token) return []
+    
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+    
+    try {
+      let res = await fetch('/api/departements/', { headers })
+      if (!res.ok) {
+        res = await fetch('/api/departements', { headers })
+      }
+      if (!res.ok) {
+        console.warn('⚠️ Impossible de charger les départements, status:', res.status)
+        return []
+      }
+      const data = await res.json()
+      const liste = normaliserListe(data)
+      console.log(`✅ ${liste.length} départements chargés`)
+      return liste
+    } catch (e) {
+      console.error('❌ Erreur chargement départements:', e)
+      return []
+    }
+  }
+
+  // ⭐ NOUVEAU : charger les listes du modal d'embauche
+  const loadConversionData = async () => {
+    setLoadingConversionData(true)
+    try {
+      const [postesData, contratsData, departementsData] = await Promise.all([
+        offreService.getPostes(),
+        offreService.getContrats(),
+        fetchDepartements()
+      ])
+      setPostes(postesData)
+      setContrats(contratsData)
+      setDepartements(departementsData)
+    } catch (error) {
+      console.error('❌ Erreur chargement données embauche:', error)
+      afficherNotification('Erreur lors du chargement des listes', 'error')
+    } finally {
+      setLoadingConversionData(false)
+    }
   }
 
   // ⭐ FETCH DATA - CORRIGÉ AVEC getToken()
@@ -400,34 +456,9 @@ const Candidatures = () => {
       setPostes(postesData)
       setContrats(contratsData)
       
-      // ⭐ Récupérer les départements - OPTIONNEL
-      try {
-        const token = getToken()
-        if (token) {
-              let depRes = await fetch('/api/departements/', {
-            headers: { 
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          })
-          
-          if (!depRes.ok) {
-                depRes = await fetch('/api/departements', {
-              headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            })
-          }
-          
-          if (depRes.ok) {
-            setDepartements(await depRes.json())
-          }
-        }
-      } catch (e) {
-        // Ne pas bloquer si les départements ne sont pas récupérés
-        setDepartements([])
-      }
+      // ⭐ Récupérer les départements - via la fonction robuste
+      const departementsData = await fetchDepartements()
+      setDepartements(departementsData)
     } catch (error: any) {
       console.error('Erreur chargement candidatures:', error)
       
@@ -648,8 +679,8 @@ const Candidatures = () => {
     }
   }
 
-  // ⭐ OUVRIRE LE MODAL D'EMBAUCHE
-  const ouvrirModalEmbauche = (candidature: any) => {
+  // ⭐ OUVRIR LE MODAL D'EMBAUCHE - chargement des listes garanti
+  const ouvrirModalEmbauche = async (candidature: any) => {
     setSelectedCandidature(candidature)
     setConvertData({
       poste_id: 0,
@@ -659,6 +690,8 @@ const Candidatures = () => {
       titre_poste: ''
     })
     setShowConvertModal(true)
+    // ⭐ Charger les listes (postes, contrats, départements) à chaque ouverture
+    await loadConversionData()
   }
 
   const getStatutInfo = (statut: string) => {
@@ -1342,25 +1375,14 @@ const Candidatures = () => {
                   <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                     {candidatComplet.statut_candidature === 'ACCEPTEE' && (
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           const candidatureFake = {
                             id: candidatComplet.candidature_id || 1,
                             candidat_prenom: candidatComplet.prenom,
                             candidat_nom: candidatComplet.nom,
                             candidat_id: candidatComplet.id
                           }
-                          setSelectedCandidature({
-                            id: candidatComplet.candidature_id || 1,
-                            candidat_id: candidatComplet.id,
-                            offre_id: 0,
-                            statut: 'ACCEPTEE',
-                            date_candidature: new Date().toISOString(),
-                            candidat_nom: candidatComplet.nom,
-                            candidat_prenom: candidatComplet.prenom,
-                            a_cv: true,
-                            a_lettre_motivation: !!candidatComplet.lettre_motivation,
-                          } as any)
-                          setShowConvertModal(true)
+                          await ouvrirModalEmbauche(candidatureFake)
                         }}
                         className="flex-1 glass-button flex items-center justify-center gap-2"
                       >
@@ -1558,8 +1580,11 @@ const Candidatures = () => {
                     onChange={(e) => setConvertData({ ...convertData, poste_id: Number(e.target.value) })}
                     className="glass-input w-full"
                     required
+                    disabled={loadingConversionData}
                   >
-                    <option value={0}>Sélectionner un poste</option>
+                    <option value={0}>
+                      {loadingConversionData ? 'Chargement...' : 'Sélectionner un poste'}
+                    </option>
                     {postes.map(p => (
                       <option key={`poste-${p.id}`} value={p.id}>{p.titre}</option>
                     ))}
@@ -1572,12 +1597,20 @@ const Candidatures = () => {
                     value={convertData.departement_id}
                     onChange={(e) => setConvertData({ ...convertData, departement_id: Number(e.target.value) })}
                     className="glass-input w-full"
+                    disabled={loadingConversionData}
                   >
-                    <option value={0}>Sélectionner un département</option>
+                    <option value={0}>
+                      {loadingConversionData ? 'Chargement...' : 'Sélectionner un département'}
+                    </option>
                     {departements.map(d => (
                       <option key={`dep-${d.id}`} value={d.id}>{d.nom}</option>
                     ))}
                   </select>
+                  {!loadingConversionData && departements.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Aucun département disponible (champ optionnel)
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1586,8 +1619,11 @@ const Candidatures = () => {
                     value={convertData.contrat_id}
                     onChange={(e) => setConvertData({ ...convertData, contrat_id: Number(e.target.value) })}
                     className="glass-input w-full"
+                    disabled={loadingConversionData}
                   >
-                    <option value={0}>Sélectionner un contrat</option>
+                    <option value={0}>
+                      {loadingConversionData ? 'Chargement...' : 'Sélectionner un contrat'}
+                    </option>
                     {contrats.map(c => (
                       <option key={`contrat-${c.id}`} value={c.id}>{c.type_contrat}</option>
                     ))}
@@ -1630,7 +1666,7 @@ const Candidatures = () => {
                   </button>
                   <button
                     onClick={() => handleConvertir(selectedCandidature.id)}
-                    disabled={conversionLoading}
+                    disabled={conversionLoading || loadingConversionData}
                     className="flex-1 glass-button flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {conversionLoading ? (
