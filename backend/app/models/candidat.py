@@ -2,9 +2,10 @@
 """
 Modèle Candidat
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, ForeignKey, LargeBinary
+from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.mysql import LONGBLOB  # ⭐ IMPORTATION DU TYPE LONGBLOB
 from app.core.database import Base
 import enum
 
@@ -35,17 +36,17 @@ class Candidat(Base):
     telephone = Column(String(20))
     adresse = Column(Text)
     
-    # Photos
-    photo_blob = Column(LargeBinary)
+    # Photos (⭐ Modifié en LONGBLOB)
+    photo_blob = Column(LONGBLOB)
     photo_type = Column(String(50))
     
-    # CV
-    cv_blob = Column(LargeBinary)
+    # CV (⭐ Modifié en LONGBLOB)
+    cv_blob = Column(LONGBLOB)
     cv_type = Column(String(50))
     cv_path = Column(String(255))
     
-    # Lettre de motivation
-    lettre_motivation_blob = Column(LargeBinary)
+    # Lettre de motivation (⭐ Modifié en LONGBLOB)
+    lettre_motivation_blob = Column(LONGBLOB)
     lettre_motivation_type = Column(String(50))
     
     # Informations professionnelles

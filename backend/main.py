@@ -299,6 +299,20 @@ async def debug_token(request: Request):
             "token": token[:20] + "..."
         }
 
+# ⭐ ROUTE TEMPORAIRE POUR CORRIGER LES COLONNES BLOB SUR AIVEN ⭐
+@app.get("/fix-files-columns")
+def fix_files_columns():
+    from app.core.database import engine
+    from sqlalchemy import text
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE candidats MODIFY COLUMN photo_blob LONGBLOB;"))
+            connection.execute(text("ALTER TABLE candidats MODIFY COLUMN cv_blob LONGBLOB;"))
+            connection.execute(text("ALTER TABLE candidats MODIFY COLUMN lettre_motivation_blob LONGBLOB;"))
+        return {"status": "success", "message": "Toutes les colonnes de fichiers ont été passées en LONGBLOB !"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 # ⭐ INCLURE TOUS LES ROUTEURS
 app.include_router(auth.router)
 app.include_router(candidats.router)
