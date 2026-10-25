@@ -457,23 +457,12 @@ const ProfilCandidat = () => {
         <GlassCard className="p-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
-              {/* ⭐ BALISE IMG SIMPLE AVEC URL CENTRALISÉE */}
+              {/* ⭐ BALISE IMG SIMPLE - IDENTIQUE AU DASHBOARD QUI FONCTIONNE */}
               <img
-                key={`photo-${profil.id}-${imageVersion}`} // force le rechargement
+                key={`photo-${profil.id}-${imageVersion}`}
                 src={getCandidatPhotoUrl(profil.id)}
                 alt={`${profil.prenom} ${profil.nom}`}
                 className="w-28 h-28 rounded-full object-cover border-4 border-primary-500/30 flex-shrink-0 bg-gray-100 dark:bg-gray-800"
-                onError={(e) => {
-                  // Si l'image ne charge pas, on affiche les initiales
-                  e.currentTarget.style.display = 'none';
-                  const parent = e.currentTarget.parentElement;
-                  if (parent) {
-                    const fallback = document.createElement('div');
-                    fallback.className = "w-28 h-28 rounded-full bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl flex-shrink-0";
-                    fallback.innerText = `${profil.prenom?.charAt(0) || ''}${profil.nom?.charAt(0) || ''}`;
-                    parent.insertBefore(fallback, e.currentTarget);
-                  }
-                }}
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
