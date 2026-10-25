@@ -8,6 +8,9 @@ const API_BASE_URL = configuredApiUrl && !configuredApiUrl.includes('localhost')
   ? configuredApiUrl
   : '/api'
 
+// ⭐ URL DE BASE POUR LES IMAGES/FICHIERS (sans le /api à la fin)
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '')
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {},
@@ -16,11 +19,6 @@ const api = axios.create({
 
 /**
  * ⭐ Récupère le token JWT de manière robuste.
- * L'ordre de priorité est important :
- *  1. `smartrecruit_token` (clé utilisée par authService)
- *  2. Store Zustand persisté (auth-storage, authStore, auth)
- *  3. Store Zustand en mémoire
- *  4. Fallbacks legacy (token, sessionStorage)
  */
 export const getToken = (): string | null => {
   try {
@@ -69,7 +67,6 @@ export const getToken = (): string | null => {
 
 /**
  * Supprime toutes les données de session.
- * ⚠️ Ne doit être appelé QUE sur action explicite de l'utilisateur (logout).
  */
 export const clearSession = () => {
   try {
@@ -97,7 +94,6 @@ export const clearSession = () => {
 
 api.interceptors.request.use(
   (config) => {
-    // Ne pas écraser le Content-Type si FormData (le navigateur doit le définir)
     if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
       config.headers.delete?.('Content-Type')
       config.headers.delete?.('content-type')
@@ -105,7 +101,6 @@ api.interceptors.request.use(
 
     const token = getToken()
 
-    // ⭐ Log temporaire pour debug — à supprimer après résolution
     console.log(
       '🔌 INTERCEPTOR →',
       config.method?.toUpperCase(),
@@ -136,15 +131,6 @@ api.interceptors.response.use(
     const status = error.response?.status
     const url = error.config?.url || ''
 
-    // ⭐⭐⭐ CORRECTION CRITIQUE ⭐⭐⭐
-    // NE JAMAIS supprimer le token automatiquement sur 401/403.
-    // Un 401 peut venir de :
-    //   - une route backend mal configurée
-    //   - une race condition au démarrage
-    //   - une requête vers une autre API
-    //   - un rôle insuffisant (devrait être 403, mais parfois 401)
-    // → Supprimer le token déconnecte l'utilisateur sans raison valable.
-    // → La déconnexion doit être EXPLICITE (bouton logout).
     if (status === 401) {
       console.warn(`⚠️ 401 sur ${url} — token conservé (pas de clearSession automatique)`)
       return Promise.reject(error)
@@ -174,5 +160,32 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+// ⭐⭐⭐ FONCTIONS UTILES POUR CONSTRUIRE LES URL D'IMAGES ⭐⭐⭐
+export const getCandidatPhotoUrl = (candidatId: number | string) => {
+  if (!candidatId) return ''
+  return `${API_ORIGIN}/api/candidats/${candidatId}/photo?t=${Date.now()}`
+}
+
+export const getEntrepriseLogoUrl = (entrepriseId: number | string) => {
+  if (!entrepriseId) return ''
+  return `${API_ORIGIN}/api/entreprises/${entrepriseId}/logo?t=${Date.now()}`
+}
+
+export const getCandidatPhotoByUserUrl = (userId: number | string) => {
+  if (!userId) return ''
+  return `${API_ORIGIN}/api/candidats/by-utilisateur/${userId}/photo?t=${Date.now()}`
+}
+
+export const getEntrepriseLogoByUserUrl = (userId: number | string) => {
+  if (!userId) return ''
+  return `${API_ORIGIN}/api/entreprises/by-utilisateur/${userId}/logo?t=${Date.now()}`
+}
+
+export const getFileUrl = (url: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`
+}
 
 export default api

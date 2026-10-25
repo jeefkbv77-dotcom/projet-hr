@@ -7,9 +7,8 @@ import {
   Building2, Home, Search, LayoutDashboard, FileText, 
   ShieldCheck, MessageSquare, UserPlus, ChevronDown, Droplets
 } from 'lucide-react'
-
-// URL backend par défaut
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000'
+// ⭐ IMPORTATION DES FONCTIONS DEPUIS api.ts
+import { getCandidatPhotoByUserUrl, getEntrepriseLogoByUserUrl } from '@/services/api'
 
 const Navigation = () => {
   const [menuOuvert, setMenuOuvert] = useState(false)
@@ -23,7 +22,7 @@ const Navigation = () => {
   const location = useLocation()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Réinitialisation de l'erreur si l'utilisateur ou la photo change
+  // Réinitialisation de l'erreur si l'utilisateur change
   useEffect(() => {
     setErreurImage(false)
   }, [utilisateur])
@@ -107,37 +106,12 @@ const Navigation = () => {
     ? `${utilisateur.prenom || utilisateur.candidat?.prenom || ''} ${utilisateur.nom || utilisateur.candidat?.nom || ''}`.trim() || utilisateur.nom_entreprise || utilisateur.username || utilisateur.email
     : ''
 
-  // Résolution ultrarobuste de l'URL de l'image / avatar
-  const getPhotoUrl = () => {
-    if (!utilisateur) return null
-
-    // Cherche dans toutes les propriétés possibles (racine ou objets imbriqués)
-    const sourcePhoto = 
-      utilisateur.photo || 
-      utilisateur.avatar_url || 
-      utilisateur.avatar || 
-      utilisateur.photo_url || 
-      utilisateur.image ||
-      utilisateur.logo ||
-      utilisateur.candidat?.photo ||
-      utilisateur.candidat?.avatar ||
-      utilisateur.entreprise?.logo ||
-      utilisateur.profil?.photo
-
-    if (!sourcePhoto || typeof sourcePhoto !== 'string') return null
-
-    // Si c'est déjà une URL complète (HTTP, HTTPS) ou du Base64 Data URL
-    if (sourcePhoto.startsWith('http://') || sourcePhoto.startsWith('https://') || sourcePhoto.startsWith('data:')) {
-      return sourcePhoto
-    }
-
-    // Reconstruction avec le domaine API backend
-    const cleanBase = API_BASE_URL.replace(/\/$/, '')
-    const cleanPath = sourcePhoto.startsWith('/') ? sourcePhoto : `/${sourcePhoto}`
-    return `${cleanBase}${cleanPath}`
-  }
-
-  const urlPhotoComplete = getPhotoUrl()
+  // ⭐ URL de la photo (via les fonctions centralisées de api.ts)
+  const urlPhotoComplete = utilisateur
+    ? (utilisateur.role === 'entreprise' 
+        ? getEntrepriseLogoByUserUrl(utilisateur.id) 
+        : getCandidatPhotoByUserUrl(utilisateur.id))
+    : null
 
   const getInitiales = () => {
     if (!utilisateur) return 'U'

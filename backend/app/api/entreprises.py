@@ -115,27 +115,33 @@ async def upload_mon_logo(
     }
 
 
+# ⭐⭐⭐ ROUTES LOGO PUBLIQUES (SANS TOKEN) ⭐⭐⭐
 @router.get("/by-utilisateur/{user_id}/logo")
 async def get_logo_entreprise_by_user(
     user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db) # ⭐ SUPPRIMÉ : current_user (ou token)
 ):
+    """Obtenir le logo d'une entreprise via l'ID de l'utilisateur (public)"""
     entreprise = db.query(Entreprise).filter(Entreprise.utilisateur_id == user_id).first()
     if not entreprise or not entreprise.logo_blob:
         raise HTTPException(status_code=404, detail="Logo non trouvé")
+    
     return Response(
         content=entreprise.logo_blob, 
         media_type=entreprise.logo_type or "image/png",
-        headers={"Access-Control-Allow-Origin": "*"}
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "public, max-age=86400"
+        }
     )
 
 
 @router.get("/{entreprise_id}/logo")
 async def get_logo_entreprise(
     entreprise_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db) # ⭐ SUPPRIMÉ : current_user (ou token)
 ):
-    """Obtenir le logo d'une entreprise"""
+    """Obtenir le logo d'une entreprise (public)"""
     entreprise = db.query(Entreprise).filter(Entreprise.id == entreprise_id).first()
     if not entreprise or not entreprise.logo_blob:
         raise HTTPException(status_code=404, detail="Logo non trouvé")

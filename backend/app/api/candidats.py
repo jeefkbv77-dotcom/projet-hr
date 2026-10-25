@@ -201,11 +201,9 @@ async def upload_ma_photo(
     if len(contenu) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Le fichier dépasse 10MB")
     
-    # ⭐ CORRECTION : Détection intelligente du type d'image
     mime = fichier.content_type or ""
     extension = (fichier.filename or "").lower().rsplit(".", 1)[-1]
     
-    # Si le navigateur envoie un type MIME bizarre, on devine grâce à l'extension ou aux octets
     if not mime.startswith("image/"):
         if extension in ["jpg", "jpeg"]:
             mime = "image/jpeg"
@@ -216,7 +214,6 @@ async def upload_ma_photo(
         elif extension == "webp":
             mime = "image/webp"
         else:
-            # Si on ne trouve vraiment pas, on vérifie le contenu brut
             if contenu.startswith(b'\xff\xd8\xff'):
                 mime = "image/jpeg"
             elif contenu.startswith(b'\x89PNG'):
@@ -326,26 +323,28 @@ async def upload_lettre_motivation(
     }
 
 
+# ⭐⭐⭐ ROUTES PHOTO PUBLIQUES (SANS TOKEN) ⭐⭐⭐
 @router.get("/by-utilisateur/{user_id}/photo")
 async def get_photo_candidat_by_user(
     user_id: int,
-    current_user: Utilisateur = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db) # ⭐ SUPPRIMÉ : current_user
 ):
     candidat = db.query(Candidat).filter(Candidat.utilisateur_id == user_id).first()
     if not candidat or not candidat.photo_blob:
         raise HTTPException(status_code=404, detail="Photo non trouvée")
-    return Response(content=candidat.photo_blob, media_type=candidat.photo_type or "image/jpeg")
+    return Response(
+        content=candidat.photo_blob, 
+        media_type=candidat.photo_type or "image/jpeg",
+        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=86400"}
+    )
 
 
-# ⭐ CORRECTION 1 : PHOTO - TOKEN OBLIGATOIRE
 @router.get("/{candidat_id}/photo")
 async def get_photo_candidat(
     candidat_id: int,
-    current_user: Utilisateur = Depends(get_current_user),  # ⭐ PLUS OPTIONAL
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db) # ⭐ SUPPRIMÉ : current_user
 ):
-    """Obtenir la photo de profil d'un candidat - Token obligatoire"""
+    """Obtenir la photo de profil d'un candidat (publique)"""
     candidat = db.query(Candidat).filter(Candidat.id == candidat_id).first()
     if not candidat or not candidat.photo_blob:
         raise HTTPException(status_code=404, detail="Photo non trouvée")
@@ -429,14 +428,8 @@ async def get_candidat_complet(
 ):
     """
     Récupérer toutes les informations d'un candidat
-    
-    - Admin: peut voir tous les profils
-    - Entreprise: peut voir les profils des candidats qui ont postulé à ses offres
-    - Candidat: peut voir son propre profil uniquement
     """
-    # Vérifier les droits d'accès
     if current_user.role == RoleEnum.CANDIDAT:
-        # Un candidat ne peut voir que son propre profil complet
         candidat_self = db.query(Candidat).filter(Candidat.utilisateur_id == current_user.id).first()
         if candidat_self and candidat_self.id != candidat_id:
             raise HTTPException(
@@ -444,7 +437,6 @@ async def get_candidat_complet(
                 detail="Vous ne pouvez pas voir le profil d'un autre candidat"
             )
     
-    # Pour les entreprises, vérifier l'accès
     if current_user.role == RoleEnum.ENTREPRISE:
         entreprise = db.query(Entreprise).filter(Entreprise.utilisateur_id == current_user.id).first()
         if not entreprise:
@@ -452,8 +444,6 @@ async def get_candidat_complet(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Profil entreprise non trouvé"
             )
-        # Les entreprises peuvent voir les profils des candidats
-        # (elles n'ont accès qu'à ceux qui ont postulé à leurs offres)
         pass
     
     candidat = db.query(Candidat).filter(Candidat.id == candidat_id).first()
@@ -541,7 +531,6 @@ async def get_candidat_offre_score(
     """
     from app.models.offre import OffreEmploi
     
-    # Vérifier que le candidat existe
     candidat = db.query(Candidat).filter(Candidat.id == candidat_id).first()
     if not candidat:
         raise HTTPException(
@@ -549,7 +538,6 @@ async def get_candidat_offre_score(
             detail="Candidat non trouvé"
         )
     
-    # Vérifier que l'offre existe
     offre = db.query(OffreEmploi).filter(OffreEmploi.id == offre_id).first()
     if not offre:
         raise HTTPException(
@@ -557,7 +545,6 @@ async def get_candidat_offre_score(
             detail="Offre non trouvée"
         )
     
-    # Vérifier les droits d'accès pour les entreprises
     if current_user.role == RoleEnum.ENTREPRISE:
         entreprise = db.query(Entreprise).filter(Entreprise.utilisateur_id == current_user.id).first()
         if not entreprise:
@@ -571,7 +558,6 @@ async def get_candidat_offre_score(
                 detail="Vous n'avez pas accès à cette offre"
             )
     
-    # Vérifier les droits d'accès pour les candidats
     if current_user.role == RoleEnum.CANDIDAT:
         candidat_self = db.query(Candidat).filter(Candidat.utilisateur_id == current_user.id).first()
         if candidat_self and candidat_self.id != candidat_id:
@@ -580,21 +566,18 @@ async def get_candidat_offre_score(
                 detail="Vous ne pouvez pas voir le score d'un autre candidat"
             )
     
-    # Récupérer les compétences du candidat
     competences_candidat = db.query(Competence).join(CandidatCompetence).filter(
         CandidatCompetence.candidat_id == candidat.id
     ).all()
     competences_candidat_ids = [c.id for c in competences_candidat]
     competences_candidat_noms = [c.nom for c in competences_candidat]
     
-    # Récupérer les compétences de l'offre
     competences_offre = db.query(Competence).join(OffreCompetence).filter(
         OffreCompetence.offre_id == offre.id
     ).all()
     competences_offre_ids = [c.id for c in competences_offre]
     competences_offre_noms = [c.nom for c in competences_offre]
     
-    # Calculer le score
     if competences_offre_ids:
         matched_ids = set(competences_candidat_ids) & set(competences_offre_ids)
         total = len(competences_offre_ids)
@@ -794,8 +777,7 @@ async def get_mes_recommandations(
     limit: int = 10
 ):
     """
-    Récupérer les recommandations d'offres pour le candidat connecté
-    """
+    Récupérer les recommandations d'offres pour le candidat connecté    """
     from app.models.offre import OffreEmploi, StatutOffreEnum
     from app.models.liaisons import OffreCompetence
     

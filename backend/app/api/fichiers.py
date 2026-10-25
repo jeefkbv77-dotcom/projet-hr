@@ -299,7 +299,7 @@ async def upload_fichier(
         "description": fichier_db.description,
         "est_public": fichier_db.est_public,
         "est_actif": fichier_db.est_actif,
-        "url_stockage": file_url,  # ⭐ URL corrigée
+        "url_stockage": file_url,
         "nombre_telechargements": fichier_db.nombre_telechargements,
         "dernier_acces": fichier_db.dernier_acces,
         "owl_iri": fichier_db.owl_iri,
@@ -308,12 +308,13 @@ async def upload_fichier(
     }
 
 
+# ⭐⭐⭐ ROUTE DE TÉLÉCHARGEMENT PUBLIQUE (SANS TOKEN) ⭐⭐⭐
 @router.get("/{fichier_id}/download")
 async def download_fichier(
     fichier_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db) # ⭐ SUPPRIMÉ : current_user
 ):
-    """Télécharger le contenu d'un fichier"""
+    """Télécharger le contenu d'un fichier (public)"""
     fichier = db.query(Fichier).filter(Fichier.id == fichier_id).first()
     if not fichier:
         raise HTTPException(
@@ -344,12 +345,13 @@ async def download_fichier(
     raise HTTPException(status_code=404, detail="Fichier non trouvé")
 
 
+# ⭐⭐⭐ ROUTE DE VISUALISATION PUBLIQUE (SANS TOKEN) ⭐⭐⭐
 @router.get("/{fichier_id}/view")
 async def view_fichier(
     fichier_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db) # ⭐ SUPPRIMÉ : current_user
 ):
-    """Voir un fichier (inline, pour les images)"""
+    """Voir un fichier (inline, pour les images et vidéos) - public"""
     fichier = db.query(Fichier).filter(Fichier.id == fichier_id).first()
     if not fichier:
         raise HTTPException(
