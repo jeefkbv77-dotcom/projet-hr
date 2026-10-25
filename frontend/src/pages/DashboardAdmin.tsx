@@ -1,4 +1,4 @@
-// pages/DashboardAdmin.tsx - Version corrigée avec gestion du token et photos
+// pages/DashboardAdmin.tsx - Version corrigée
 import { motion } from 'framer-motion'
 import GlassCard from '@/components/GlassCard'
 import Skeleton from '@/components/Skeleton'
@@ -17,10 +17,10 @@ import { useState, useEffect } from 'react'
 import { adminService, Statistiques, Utilisateur, OntologyStatus } from '@/services/adminService'
 import { useNotificationStore } from '@/store/useStore'
 import { useAuthStore } from '@/store/useStore'
-// ⭐ IMPORTER getToken DEPUIS api.ts
-import { getToken } from '@/services/api'
+// ⭐ IMPORTATIONS DEPUIS api.ts
+import { getToken, getCandidatPhotoUrl, getEntrepriseLogoUrl } from '@/services/api'
 
-// ⭐ COMPOSANT PHOTO AVEC FALLBACK - CORRIGÉ AVEC getToken()
+// ⭐ COMPOSANT PHOTO (utilise les URLs publiques centralisées)
 const UserPhoto = ({ 
   userId, 
   email,
@@ -35,77 +35,13 @@ const UserPhoto = ({
   className?: string
 }) => {
   const [photoError, setPhotoError] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   
-  useEffect(() => {
-    let isMounted = true
-    let objectUrl: string | null = null
-    
-    const fetchPhoto = async () => {
-      const token = getToken()
-      
-      if (!token) {
-        if (isMounted) {
-          setPhotoError(true)
-          setLoading(false)
-        }
-        return
-      }
-      
-      try {
-        const response = await fetch(`/api/candidats/${userId}/photo?t=${Date.now()}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        
-        if (isMounted) {
-          if (response.ok) {
-            const blob = await response.blob()
-            if (blob.type.startsWith('image/')) {
-              objectUrl = URL.createObjectURL(blob)
-              setPhotoUrl(objectUrl)
-              setPhotoError(false)
-            } else {
-              setPhotoError(true)
-            }
-          } else {
-            setPhotoError(true)
-          }
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error('❌ Erreur chargement photo:', error)
-        if (isMounted) {
-          setPhotoError(true)
-          setLoading(false)
-        }
-      }
-    }
-    
-    fetchPhoto()
-    
-    return () => {
-      isMounted = false
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
-      if (photoUrl) {
-        URL.revokeObjectURL(photoUrl)
-      }
-    }
-  }, [userId])
+  // Selon le rôle, on utilise l'URL de la photo ou du logo
+  const photoUrl = role === 'entreprise' 
+    ? getEntrepriseLogoUrl(userId) 
+    : getCandidatPhotoUrl(userId)
   
-  if (loading) {
-    return (
-      <div className={`${size} rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 animate-pulse ${className}`}>
-        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-      </div>
-    )
-  }
-  
-  if (photoError || !photoUrl) {
+  if (photoError) {
     const colors = {
       admin: 'bg-gradient-to-br from-red-500 to-red-600',
       entreprise: 'bg-gradient-to-br from-purple-500 to-purple-600',
@@ -124,14 +60,9 @@ const UserPhoto = ({
     <img
       src={photoUrl}
       alt={email}
-      className={`${size} rounded-full object-cover flex-shrink-0 border-2 border-primary-500/30 ${className}`}
+      className={`${size} rounded-full object-cover flex-shrink-0 border-2 border-primary-500/30 bg-gray-100 dark:bg-gray-800 ${className}`}
       loading="lazy"
-      onError={() => {
-        setPhotoError(true)
-        if (photoUrl) {
-          URL.revokeObjectURL(photoUrl)
-        }
-      }}
+      onError={() => setPhotoError(true)}
     />
   )
 }
@@ -275,6 +206,7 @@ const DashboardAdmin = () => {
     }
   }
 
+  // ⭐ CORRECTION : URLs sans slash final
   const chargerListes = async () => {
     if (!verifyToken()) return
 
@@ -291,9 +223,9 @@ const DashboardAdmin = () => {
       const headers = { 'Authorization': `Bearer ${currentToken}` }
       
       const [postesRes, contratsRes, competencesRes] = await Promise.all([
-        fetch('/api/postes/', { headers }),
-        fetch('/api/contrats/', { headers }),
-        fetch('/api/competences/', { headers })
+        fetch('/api/postes', { headers }),
+        fetch('/api/contrats', { headers }),
+        fetch('/api/competences', { headers })
       ])
       
       if (postesRes.ok) setListePostes(await postesRes.json())
@@ -307,13 +239,14 @@ const DashboardAdmin = () => {
     }
   }
 
+  // ⭐ CORRECTION : URL sans slash final
   const handleCreatePoste = async () => {
     if (!verifyToken()) return
 
     setIsCreating(true)
     try {
       const currentToken = getToken()
-      const response = await fetch('/api/postes/', {
+      const response = await fetch('/api/postes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -337,13 +270,14 @@ const DashboardAdmin = () => {
     }
   }
 
+  // ⭐ CORRECTION : URL sans slash final
   const handleCreateContrat = async () => {
     if (!verifyToken()) return
 
     setIsCreating(true)
     try {
       const currentToken = getToken()
-      const response = await fetch('/api/contrats/', {
+      const response = await fetch('/api/contrats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -367,13 +301,14 @@ const DashboardAdmin = () => {
     }
   }
 
+  // ⭐ CORRECTION : URL sans slash final
   const handleCreateCompetence = async () => {
     if (!verifyToken()) return
 
     setIsCreating(true)
     try {
       const currentToken = getToken()
-      const response = await fetch('/api/competences/', {
+      const response = await fetch('/api/competences', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -397,13 +332,14 @@ const DashboardAdmin = () => {
     }
   }
 
+  // ⭐ CORRECTION : URLs sans slash final
   const supprimerPoste = async (id: number) => {
     if (!verifyToken()) return
     if (!confirm('Supprimer ce poste ?')) return
     
     try {
       const currentToken = getToken()
-      const res = await fetch(`/api/postes/${id}/`, {
+      const res = await fetch(`/api/postes/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${currentToken}` }
       })
@@ -425,7 +361,7 @@ const DashboardAdmin = () => {
     
     try {
       const currentToken = getToken()
-      const res = await fetch(`/api/contrats/${id}/`, {
+      const res = await fetch(`/api/contrats/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${currentToken}` }
       })
@@ -447,7 +383,7 @@ const DashboardAdmin = () => {
     
     try {
       const currentToken = getToken()
-      const res = await fetch(`/api/competences/${id}/`, {
+      const res = await fetch(`/api/competences/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${currentToken}` }
       })
