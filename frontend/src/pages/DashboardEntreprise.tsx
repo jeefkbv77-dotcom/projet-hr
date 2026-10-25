@@ -21,230 +21,13 @@ import { useAuthStore } from '@/store/useStore'
 import { candidatureService } from '@/services/candidatureService'
 import { candidatService } from '@/services/candidatService'
 import { Link, useNavigate } from 'react-router-dom'
-// ⭐ IMPORTER getToken DEPUIS api.ts
-import { getToken } from '@/services/api'
+// ⭐ IMPORTS DEPUIS api.ts
+import { getToken, getCandidatPhotoUrl, getEntrepriseLogoUrl } from '@/services/api'
 
 // Composant Skeleton fallback
 const SkeletonLoader = ({ className = '' }: { className?: string }) => (
   <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`} />
 )
-
-// ⭐ COMPOSANT PHOTO AVEC FALLBACK - CORRIGÉ AVEC getToken()
-const CandidatPhoto = ({ 
-  candidatId, 
-  prenom, 
-  nom, 
-  size = 'w-10 h-10',
-  className = ''
-}: { 
-  candidatId: number
-  prenom: string
-  nom: string
-  size?: string
-  className?: string
-}) => {
-  const [photoError, setPhotoError] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
-  
-  useEffect(() => {
-    let isMounted = true
-    let objectUrl: string | null = null
-    
-    const fetchPhoto = async () => {
-      // ⭐ UTILISER getToken() AU LIEU DE localStorage.getItem('token')
-      const token = getToken()
-      
-      if (!token) {
-        if (isMounted) {
-          setPhotoError(true)
-          setLoading(false)
-        }
-        return
-      }
-      
-      try {
-        const response = await fetch(`/api/candidats/${candidatId}/photo?t=${Date.now()}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        
-        if (isMounted) {
-          if (response.ok) {
-            const blob = await response.blob()
-            if (blob.type.startsWith('image/')) {
-              objectUrl = URL.createObjectURL(blob)
-              setPhotoUrl(objectUrl)
-              setPhotoError(false)
-            } else {
-              setPhotoError(true)
-            }
-          } else {
-            setPhotoError(true)
-          }
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error('❌ Erreur chargement photo:', error)
-        if (isMounted) {
-          setPhotoError(true)
-          setLoading(false)
-        }
-      }
-    }
-    
-    fetchPhoto()
-    
-    return () => {
-      isMounted = false
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
-      if (photoUrl) {
-        URL.revokeObjectURL(photoUrl)
-      }
-    }
-  }, [candidatId])
-  
-  if (loading) {
-    return (
-      <div className={`${size} rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 ${className}`}>
-        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-      </div>
-    )
-  }
-  
-  if (photoError || !photoUrl) {
-    return (
-      <div className={`${size} rounded-full bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${className}`}>
-        {prenom?.charAt(0)?.toUpperCase() || ''}{nom?.charAt(0)?.toUpperCase() || ''}
-      </div>
-    )
-  }
-  
-  return (
-    <img
-      src={photoUrl}
-      alt={`${prenom} ${nom}`}
-      className={`${size} rounded-full object-cover flex-shrink-0 border-2 border-primary-500/30 ${className}`}
-      loading="lazy"
-      onError={() => {
-        setPhotoError(true)
-        if (photoUrl) {
-          URL.revokeObjectURL(photoUrl)
-        }
-      }}
-    />
-  )
-}
-
-// ⭐ COMPOSANT POUR AFFICHER LE LOGO ENTREPRISE - CORRIGÉ (AJOUT DE className DANS LES PROPS)
-const EntrepriseLogo = ({ 
-  entrepriseId, 
-  nom,
-  size = 'w-24 h-24',
-  className = ''  // ⭐ AJOUTÉ
-}: { 
-  entrepriseId: number
-  nom?: string
-  size?: string
-  className?: string  // ⭐ AJOUTÉ
-}) => {
-  const [logoError, setLogoError] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [logoUrl, setLogoUrl] = useState<string | null>(null)
-  
-  useEffect(() => {
-    let isMounted = true
-    let objectUrl: string | null = null
-    
-    const fetchLogo = async () => {
-      const token = getToken()
-      
-      if (!token) {
-        if (isMounted) {
-          setLogoError(true)
-          setLoading(false)
-        }
-        return
-      }
-      
-      try {
-        const response = await fetch(`/api/entreprises/${entrepriseId}/logo?t=${Date.now()}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        
-        if (isMounted) {
-          if (response.ok) {
-            const blob = await response.blob()
-            if (blob.type.startsWith('image/')) {
-              objectUrl = URL.createObjectURL(blob)
-              setLogoUrl(objectUrl)
-              setLogoError(false)
-            } else {
-              setLogoError(true)
-            }
-          } else {
-            setLogoError(true)
-          }
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error('❌ Erreur chargement logo:', error)
-        if (isMounted) {
-          setLogoError(true)
-          setLoading(false)
-        }
-      }
-    }
-    
-    fetchLogo()
-    
-    return () => {
-      isMounted = false
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
-      if (logoUrl) {
-        URL.revokeObjectURL(logoUrl)
-      }
-    }
-  }, [entrepriseId])
-  
-  if (loading) {
-    return (
-      <div className={`${size} rounded-2xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 animate-pulse ${className}`}>
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
-    )
-  }
-  
-  if (logoError || !logoUrl) {
-    return (
-      <div className={`${size} rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-3xl flex-shrink-0 ${className}`}>
-        {nom?.charAt(0)?.toUpperCase() || 'E'}
-      </div>
-    )
-  }
-  
-  return (
-    <img
-      src={logoUrl}
-      alt={nom || 'Logo entreprise'}
-      className={`${size} rounded-2xl object-cover flex-shrink-0 border-4 border-primary-500/30 ${className}`}
-      loading="lazy"
-      onError={() => {
-        setLogoError(true)
-        if (logoUrl) {
-          URL.revokeObjectURL(logoUrl)
-        }
-      }}
-    />
-  )
-}
 
 const DashboardEntreprise = () => {
   const { utilisateur, estConnecte } = useAuthStore()
@@ -273,6 +56,9 @@ const DashboardEntreprise = () => {
   const [loadingRecommandations, setLoadingRecommandations] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // ⭐ État pour forcer le rafraîchissement du logo après upload
+  const [imageVersion, setImageVersion] = useState(0)
   
   // États pour les modals
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -409,7 +195,7 @@ const DashboardEntreprise = () => {
     }
   }
 
-  // ⭐ CHARGER LES CANDIDATS RECOMMANDÉS - CORRIGÉ AVEC getToken()
+  // ⭐ CHARGER LES CANDIDATS RECOMMANDÉS
   const chargerCandidatsRecommandes = async () => {
     setLoadingRecommandations(true)
     try {
@@ -487,7 +273,7 @@ const DashboardEntreprise = () => {
     }
   }, [offres])
 
-  // ⭐ VOIR LE CV D'UN CANDIDAT - CORRIGÉ
+  // ⭐ VOIR LE CV D'UN CANDIDAT
   const voirCV = (candidatId: number) => {
     if (!verifyToken()) return
     
@@ -525,7 +311,7 @@ const DashboardEntreprise = () => {
     }
   }
 
-  // ⭐ VOIR LA LETTRE DE MOTIVATION - CORRIGÉ
+  // ⭐ VOIR LA LETTRE DE MOTIVATION
   const voirLettreMotivation = (candidatId: number) => {
     if (!verifyToken()) return
     
@@ -551,7 +337,6 @@ const DashboardEntreprise = () => {
       setContrats(contratsData)
       setCompetences(competencesData)
       
-      // ⭐ CORRECTION: Appel avec slash pour les départements
       try {
         const token = getToken()
         if (token) {
@@ -591,6 +376,10 @@ const DashboardEntreprise = () => {
     try {
       await entrepriseService.uploadLogo(file)
       afficherNotification('Logo de l\'entreprise mis à jour avec succès', 'success')
+      
+      // ⭐ On force le rafraîchissement du logo
+      setImageVersion(prev => prev + 1)
+      
       await fetchData()
     } catch (error) {
       afficherNotification('Erreur lors de l\'envoi du logo', 'error')
@@ -749,7 +538,7 @@ const DashboardEntreprise = () => {
     }
   }
 
-  // ⭐ VOIR LE PROFIL COMPLET D'UN CANDIDAT - CORRIGÉ
+  // ⭐ VOIR LE PROFIL COMPLET D'UN CANDIDAT
   const voirCandidatComplet = async (candidatId: number) => {
     if (!verifyToken()) return
     
@@ -1238,12 +1027,10 @@ const DashboardEntreprise = () => {
                 <>
                   {/* Photo et infos principales */}
                   <div className="flex flex-col md:flex-row items-center gap-6 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                    <CandidatPhoto 
-                      candidatId={candidatDetail.id}
-                      prenom={candidatDetail.prenom || ''}
-                      nom={candidatDetail.nom || ''}
-                      size="w-24 h-24"
-                      className="border-4 border-primary-500/30"
+                    <img
+                      src={getCandidatPhotoUrl(candidatDetail.id)}
+                      alt={`${candidatDetail.prenom} ${candidatDetail.nom}`}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-primary-500/30 flex-shrink-0 bg-gray-100 dark:bg-gray-800"
                     />
                     <div className="flex-1 text-center md:text-left">
                       <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
@@ -1508,11 +1295,10 @@ const DashboardEntreprise = () => {
 
               {/* Info candidat */}
               <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg flex items-center gap-3">
-                <CandidatPhoto 
-                  candidatId={selectedCandidature.candidat_id}
-                  prenom={selectedCandidature.candidat_prenom || ''}
-                  nom={selectedCandidature.candidat_nom || ''}
-                  size="w-12 h-12"
+                <img
+                  src={getCandidatPhotoUrl(selectedCandidature.candidat_id)}
+                  alt="Photo"
+                  className="w-12 h-12 rounded-full object-cover border-2 border-primary-500/30 flex-shrink-0"
                 />
                 <div>
                   <p className="font-semibold text-gray-800 dark:text-gray-200">
@@ -1632,11 +1418,12 @@ const DashboardEntreprise = () => {
         <GlassCard className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-5">
             <div className="relative group">
-              <EntrepriseLogo 
-                entrepriseId={entreprise?.id || 0}
-                nom={entreprise?.nom}
-                size="w-24 h-24"
-                className=""
+              {/* ⭐ BALISE IMG SIMPLE AVEC URL CENTRALISÉE */}
+              <img
+                key={`logo-${entreprise?.id || 0}-${imageVersion}`}
+                src={getEntrepriseLogoUrl(entreprise?.id || 0)}
+                alt={entreprise?.nom || 'Logo'}
+                className="w-24 h-24 rounded-2xl object-cover border-4 border-primary-500/30 flex-shrink-0 bg-gray-100 dark:bg-gray-800"
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -1857,11 +1644,10 @@ const DashboardEntreprise = () => {
                   <GlassCard className="p-4 hover:shadow-lg transition-all cursor-pointer">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <CandidatPhoto 
-                          candidatId={candidat.id}
-                          prenom={candidat.prenom || ''}
-                          nom={candidat.nom || ''}
-                          size="w-10 h-10"
+                        <img
+                          src={getCandidatPhotoUrl(candidat.id)}
+                          alt="Photo"
+                          className="w-10 h-10 rounded-full object-cover border-2 border-primary-500/30 flex-shrink-0"
                         />
                         <div>
                           <p className="font-semibold text-gray-800 dark:text-gray-200">
@@ -1971,11 +1757,10 @@ const DashboardEntreprise = () => {
                   <GlassCard className="p-4 hover:shadow-lg transition-all cursor-pointer">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <CandidatPhoto 
-                          candidatId={candidature.candidat_id}
-                          prenom={candidature.candidat_prenom || ''}
-                          nom={candidature.candidat_nom || ''}
-                          size="w-10 h-10"
+                        <img
+                          src={getCandidatPhotoUrl(candidature.candidat_id)}
+                          alt="Photo"
+                          className="w-10 h-10 rounded-full object-cover border-2 border-primary-500/30 flex-shrink-0"
                         />
                         <div>
                           <p className="font-semibold text-gray-800 dark:text-gray-200">
@@ -2303,11 +2088,10 @@ const DashboardEntreprise = () => {
                         <GlassCard className="p-4 hover:shadow-lg transition-all">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <CandidatPhoto 
-                                candidatId={candidature.candidat_id}
-                                prenom={candidature.candidat_prenom || ''}
-                                nom={candidature.candidat_nom || ''}
-                                size="w-10 h-10"
+                              <img
+                                src={getCandidatPhotoUrl(candidature.candidat_id)}
+                                alt="Photo"
+                                className="w-10 h-10 rounded-full object-cover border-2 border-primary-500/30 flex-shrink-0"
                               />
                               <div>
                                 <p className="font-semibold text-gray-800 dark:text-gray-200">
