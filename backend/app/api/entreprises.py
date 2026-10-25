@@ -11,6 +11,7 @@ from app.models.entreprise import Entreprise
 from app.schemas.entreprise import EntrepriseCreate, EntrepriseUpdate, EntrepriseResponse
 from app.services.sync_service import sync_service
 import logging
+import mimetypes
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,6 @@ async def update_mon_entreprise(
             detail="Profil entreprise non trouvé"
         )
     
-    # Utilisation de model_dump pour compatibilité Pydantic v2
     update_data = entreprise_update.model_dump(exclude_unset=True) if hasattr(entreprise_update, 'model_dump') else entreprise_update.dict(exclude_unset=True)
     
     for field, value in update_data.items():
@@ -55,7 +55,6 @@ async def update_mon_entreprise(
     db.commit()
     db.refresh(entreprise)
     
-    # Synchronisation OWL non-bloquante
     try:
         sync_service.sync_entreprise(entreprise.id, entreprise.nom, "update", db)
     except Exception as e:
@@ -79,9 +78,36 @@ async def upload_mon_logo(
     if len(contenu) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Le fichier dépasse la limite maximale de 10 Mo")
     
-    entreprise.logo_blob = contenu
-    entreprise.logo_type = fichier.content_type or "image/png"
-    db.commit()
+    # ⭐ CORRECTION : Détection intelligente du type d'image
+    mime = fichier.content_type or ""
+    extension = (fichier.filename or "").lower().rsplit(".", 1)[-1]
+    
+    if not mime.startswith("image/"):
+        if extension in ["jpg", "jpeg"]:
+            mime = "image/jpeg"
+        elif extension == "png":
+            mime = "image/png"
+        elif extension == "gif":
+            mime = "image/gif"
+        elif extension == "webp":
+            mime = "image/webp"
+        else:
+            # Vérification par les octets magiques (Signature du fichier)
+            if contenu.startswith(b'\xff\xd8\xff'):
+                mime = "image/jpeg"
+            elif contenu.startswith(b'\x89PNG'):
+                mime = "image/png"
+            else:
+                raise HTTPException(status_code=415, detail="Le fichier fourni n'est pas une image valide")
+
+    try:
+        entreprise.logo_blob = contenu
+        entreprise.logo_type = mime
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.exception("Erreur upload logo entreprise")
+        raise HTTPException(status_code=500, detail=f"Impossible d'enregistrer le logo: {e}")
     
     return {
         "message": "Logo mis à jour avec succès",
@@ -97,7 +123,11 @@ async def get_logo_entreprise_by_user(
     entreprise = db.query(Entreprise).filter(Entreprise.utilisateur_id == user_id).first()
     if not entreprise or not entreprise.logo_blob:
         raise HTTPException(status_code=404, detail="Logo non trouvé")
-    return Response(content=entreprise.logo_blob, media_type=entreprise.logo_type or "image/png")
+    return Response(
+        content=entreprise.logo_blob, 
+        media_type=entreprise.logo_type or "image/png",
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
 
 
 @router.get("/{entreprise_id}/logo")
@@ -113,7 +143,10 @@ async def get_logo_entreprise(
     return Response(
         content=entreprise.logo_blob,
         media_type=entreprise.logo_type or "image/png",
-        headers={"Cache-Control": "public, max-age=86400"}
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "Access-Control-Allow-Origin": "*"
+        }
     )
 
 

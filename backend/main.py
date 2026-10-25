@@ -306,9 +306,15 @@ def fix_files_columns():
     from sqlalchemy import text
     try:
         with engine.begin() as connection:
+            # Candidats
             connection.execute(text("ALTER TABLE candidats MODIFY COLUMN photo_blob LONGBLOB;"))
             connection.execute(text("ALTER TABLE candidats MODIFY COLUMN cv_blob LONGBLOB;"))
             connection.execute(text("ALTER TABLE candidats MODIFY COLUMN lettre_motivation_blob LONGBLOB;"))
+            
+            # Entreprises (⭐ AJOUTÉ ICI)
+            connection.execute(text("ALTER TABLE entreprises MODIFY COLUMN logo_blob LONGBLOB;"))
+            connection.execute(text("ALTER TABLE entreprises MODIFY COLUMN photo_couverture_blob LONGBLOB;"))
+            
         return {"status": "success", "message": "Toutes les colonnes de fichiers ont été passées en LONGBLOB !"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
