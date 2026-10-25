@@ -17,7 +17,7 @@ export interface CandidatProfil {
   nombre_candidatures: number
   a_photo?: boolean
   a_cv?: boolean
-  a_lettre_motivation?: boolean  // ⭐ AJOUTÉ
+  a_lettre_motivation?: boolean
   linkedin_url?: string
   github_url?: string
   portfolio_url?: string
@@ -52,6 +52,53 @@ export interface FormationCreate {
   description?: string
 }
 
+// ⭐ FONCTION DE COMPRESSION D'IMAGE (AJOUTÉE)
+// Elle redimensionne l'image et réduit sa qualité avant l'envoi.
+const compresserImage = (file: File, maxWidth: number = 800, quality: number = 0.7): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (event) => {
+      const img = new Image()
+      img.src = event.target?.result as string
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        // Redimensionner si l'image est trop grande
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width)
+          width = maxWidth
+        }
+
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0, width, height)
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              })
+              resolve(compressedFile)
+            } else {
+              reject(new Error('Compression échouée'))
+            }
+          },
+          'image/jpeg',
+          quality
+        )
+      }
+      img.onerror = (error) => reject(error)
+    }
+    reader.onerror = (error) => reject(error)
+  })
+}
+
 export const candidatService = {
   /**
    * Récupérer le profil du candidat connecté
@@ -70,13 +117,22 @@ export const candidatService = {
   },
 
   /**
-   * Uploader la photo de profil
+   * ⭐ Uploader la photo de profil (AVEC COMPRESSION AUTOMATIQUE)
    */
   uploadPhoto: async (file: File): Promise<{ message: string; photo_url: string }> => {
-    const formData = new FormData()
-    formData.append('fichier', file)
-    const response = await api.post('/candidats/me/photo', formData)
-    return response.data
+    try {
+      // On compresse l'image avant de l'envoyer
+      const compressedFile = await compresserImage(file)
+      
+      const formData = new FormData()
+      formData.append('fichier', compressedFile)
+      
+      const response = await api.post('/candidats/me/photo', formData)
+      return response.data
+    } catch (error) {
+      console.error('❌ Erreur lors de la compression ou de l\'envoi:', error)
+      throw error
+    }
   },
 
   /**
@@ -90,7 +146,7 @@ export const candidatService = {
   },
 
   /**
-   * ⭐ Uploader la lettre de motivation - NOUVEAU
+   * Uploader la lettre de motivation
    */
   uploadLettreMotivation: async (file: File): Promise<{ message: string; url: string }> => {
     const formData = new FormData()
