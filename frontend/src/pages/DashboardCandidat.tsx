@@ -15,117 +15,7 @@ import { offreService, Offre } from '@/services/offreService'
 import { useNotificationStore } from '@/store/useStore'
 import { useAuthStore } from '@/store/useStore'
 import { Link, useNavigate } from 'react-router-dom'
-// ⭐ IMPORTER getToken DEPUIS api.ts
-import { getToken } from '@/services/api'
-
-// ⭐ COMPOSANT PHOTO AVEC FALLBACK - CORRIGÉ AVEC getToken()
-const CandidatPhoto = ({ 
-  candidatId, 
-  prenom, 
-  nom, 
-  size = 'w-28 h-28',
-  className = ''
-}: { 
-  candidatId: number
-  prenom: string
-  nom: string
-  size?: string
-  className?: string
-}) => {
-  const [photoError, setPhotoError] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
-  
-  useEffect(() => {
-    let isMounted = true
-    let objectUrl: string | null = null
-    
-    const fetchPhoto = async () => {
-      const token = getToken()
-      
-      if (!token) {
-        if (isMounted) {
-          setPhotoError(true)
-          setLoading(false)
-        }
-        return
-      }
-      
-      try {
-        const response = await fetch(`/api/candidats/${candidatId}/photo?t=${Date.now()}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        
-        if (isMounted) {
-          if (response.ok) {
-            const blob = await response.blob()
-            if (blob.type.startsWith('image/')) {
-              objectUrl = URL.createObjectURL(blob)
-              setPhotoUrl(objectUrl)
-              setPhotoError(false)
-            } else {
-              setPhotoError(true)
-            }
-          } else {
-            setPhotoError(true)
-          }
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error('❌ Erreur chargement photo:', error)
-        if (isMounted) {
-          setPhotoError(true)
-          setLoading(false)
-        }
-      }
-    }
-    
-    fetchPhoto()
-    
-    return () => {
-      isMounted = false
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
-      if (photoUrl) {
-        URL.revokeObjectURL(photoUrl)
-      }
-    }
-  }, [candidatId])
-  
-  if (loading) {
-    return (
-      <div className={`${size} rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 animate-pulse ${className}`}>
-        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-      </div>
-    )
-  }
-  
-  if (photoError || !photoUrl) {
-    return (
-      <div className={`${size} rounded-full bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 ${className}`}>
-        {prenom?.charAt(0)?.toUpperCase() || ''}{nom?.charAt(0)?.toUpperCase() || ''}
-      </div>
-    )
-  }
-  
-  return (
-    <img
-      src={photoUrl}
-      alt={`${prenom} ${nom}`}
-      className={`${size} rounded-full object-cover flex-shrink-0 border-4 border-primary-500/30 ${className}`}
-      loading="lazy"
-      onError={() => {
-        setPhotoError(true)
-        if (photoUrl) {
-          URL.revokeObjectURL(photoUrl)
-        }
-      }}
-    />
-  )
-}
+import { getToken, getCandidatPhotoUrl } from '@/services/api'
 
 // Composant Skeleton fallback
 const SkeletonLoader = ({ className = '' }: { className?: string }) => (
@@ -155,6 +45,9 @@ const DashboardCandidat = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cvInputRef = useRef<HTMLInputElement>(null)
   const { afficherNotification } = useNotificationStore()
+  
+  // On garde une version de l'URL pour forcer le rafraîchissement après upload
+  const [imageVersion, setImageVersion] = useState(0)
 
   // ⭐ PROTECTION DE RÔLE - UNIQUEMENT CANDIDATS
   useEffect(() => {
@@ -285,7 +178,6 @@ const DashboardCandidat = () => {
         const recommandations = await offreService.getRecommandations(5)
         setOffresRecommandees(recommandations)
       } else {
-        // Fallback: utiliser les offres avec score de compatibilité
         const offresData = await offreService.getOffres()
         const offresAvecScores = offresData.slice(0, 5).map((offre, index) => ({
           ...offre,
@@ -322,6 +214,10 @@ const DashboardCandidat = () => {
     try {
       await candidatService.uploadPhoto(file)
       afficherNotification('Photo de profil mise à jour avec succès', 'success')
+      
+      // ⭐ On force le rafraîchissement de l'image en changeant la version
+      setImageVersion(prev => prev + 1)
+      
       await fetchData()
     } catch (error) {
       afficherNotification('Erreur lors de l\'envoi de la photo', 'error')
@@ -722,11 +618,23 @@ const DashboardCandidat = () => {
         <GlassCard className="p-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
-              <CandidatPhoto 
-                candidatId={profil.id}
-                prenom={profil.prenom}
-                nom={profil.nom}
-                size="w-28 h-28"
+              {/* ⭐ BALISE IMG SIMPLE AVEC URL CENTRALISÉE */}
+              <img
+                key={`photo-${profil.id}-${imageVersion}`} // force le rechargement
+                src={getCandidatPhotoUrl(profil.id)}
+                alt={`${profil.prenom} ${profil.nom}`}
+                className="w-28 h-28 rounded-full object-cover border-4 border-primary-500/30 flex-shrink-0 bg-gray-100 dark:bg-gray-800"
+                onError={(e) => {
+                  // Si l'image ne charge pas, on affiche les initiales
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    const fallback = document.createElement('div');
+                    fallback.className = "w-28 h-28 rounded-full bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl flex-shrink-0";
+                    fallback.innerText = `${profil.prenom?.charAt(0) || ''}${profil.nom?.charAt(0) || ''}`;
+                    parent.insertBefore(fallback, e.currentTarget);
+                  }
+                }}
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
